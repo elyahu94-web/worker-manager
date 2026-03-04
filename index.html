@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<title>ניהול עובדים | אורסיד</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0a0e1a;
+  --bg2:     #111827;
+  --bg3:     #1a2235;
+  --border:  rgba(255,255,255,.08);
+  --text1:   #f0f4ff;
+  --text2:   #b0bec5;
+  --text3:   #607d8b;
+  --accent:  #4f8ef7;
+  --green:   #34d399;
+  --red:     #f87171;
+  --yellow:  #fbbf24;
+  --orange:  #fb923c;
+  --purple:  #a78bfa;
+  --navy:    #0f3460;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Heebo',Arial,sans-serif;background:var(--bg);color:var(--text1);direction:rtl;min-height:100vh}
+
+/* HEADER */
+.header{
+  background:rgba(10,14,26,.95);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0 20px;
+  height:70px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.header-logo{height:52px;width:auto;object-fit:contain}
+.header-title{font-size:.85rem;color:var(--text2);font-weight:500}
+
+/* TABS */
+.tabs-wrap{padding:16px 16px 0;max-width:760px;margin:0 auto}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{
+  flex:1;min-width:80px;
+  padding:10px 8px;
+  border-radius:10px;
+  border:1.5px solid var(--border);
+  background:var(--bg2);
+  font-size:.78rem;font-weight:700;cursor:pointer;
+  font-family:'Heebo',Arial;text-align:center;
+  color:var(--text2);transition:all .2s;
+}
+.tab:hover{border-color:var(--accent);color:var(--accent)}
+.tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* MAIN */
+.con{max-width:760px;margin:0 auto;padding:16px}
+
+/* CARD */
+.crd{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:20px;
+  margin-bottom:14px;
+}
+.crd h2{
+  font-size:.95rem;font-weight:700;color:var(--text1);
+  border-right:3px solid var(--accent);
+  padding-right:10px;margin-bottom:16px;
+}
+
+/* FORM */
+.fg{margin-bottom:12px}
+.fg label,.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);margin-bottom:5px}
+.inp,.sel,.fg input,.fg textarea,.fg select{
+  width:100%;padding:10px 14px;
+  background:var(--bg3);
+  border:1.5px solid var(--border);
+  border-radius:9px;
+  font-size:.9rem;font-family:'Heebo',Arial;
+  color:var(--text1);direction:rtl;
+  transition:border-color .2s;
+}
+.inp:focus,.sel:focus,.fg input:focus,.fg textarea:focus,.fg select:focus{
+  outline:none;border-color:var(--accent)
+}
+.fg textarea{height:110px;resize:vertical}
+select option{background:var(--bg2)}
+
+/* BUTTONS */
+.btn{
+  width:100%;padding:13px;border:none;border-radius:10px;
+  font-size:.95rem;font-weight:700;cursor:pointer;
+  font-family:'Heebo',Arial;margin-top:4px;transition:opacity .2s;
+}
+.btn:hover{opacity:.88}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.bp{background:var(--accent);color:#fff}
+.bg{background:var(--green);color:#0a0e1a}
+.bo{background:var(--orange);color:#fff}
+.br{background:var(--red);color:#fff}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:var(--bg3);color:var(--text2);padding:9px 10px;text-align:right;font-weight:600;border-bottom:1px solid var(--border)}
+td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text1)}
+td input{
+  width:100%;background:var(--bg3);border:1px solid var(--border);
+  border-radius:6px;padding:5px 8px;font-family:'Heebo',Arial;
+  font-size:.82rem;direction:rtl;color:var(--text1);
+}
+tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+
+/* BADGES */
+.badge{background:rgba(79,142,247,.15);color:var(--accent);padding:2px 9px;border-radius:8px;font-size:.75rem;white-space:nowrap}
+.badge-green{background:rgba(52,211,153,.15);color:var(--green);padding:2px 9px;border-radius:8px;font-size:.75rem}
+.badge-yellow{background:rgba(251,191,36,.15);color:var(--yellow);padding:2px 9px;border-radius:8px;font-size:.75rem}
+.badge-red{background:rgba(248,113,113,.15);color:var(--red);padding:2px 9px;border-radius:8px;font-size:.75rem}
+.auto-badge{background:rgba(52,211,153,.15);color:var(--green);padding:2px 7px;border-radius:7px;font-size:.7rem;margin-left:4px}
+
+/* TOAST */
+.toast{
+  position:fixed;top:14px;left:50%;
+  transform:translateX(-50%) translateY(-120px);
+  background:var(--green);color:#0a0e1a;
+  padding:11px 22px;border-radius:10px;
+  font-weight:700;transition:transform .35s;
+  z-index:9999;font-size:.88rem;
+}
+.toast.on{transform:translateX(-50%) translateY(0)}
+
+/* OVERLAYS */
+.overlay{
+  display:none;position:fixed;top:0;left:0;
+  width:100%;height:100%;
+  background:rgba(0,0,0,.6);
+  z-index:1000;justify-content:center;align-items:center;
+  backdrop-filter:blur(4px);
+}
+.overlay.on{display:flex}
+.modal{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:16px;padding:24px;
+  width:340px;direction:rtl;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+.modal h3{color:var(--text1);margin-bottom:16px;font-size:1rem}
+.modal label{display:block;font-size:.78rem;font-weight:600;color:var(--text2);margin-bottom:4px}
+.modal input,.modal select{
+  width:100%;padding:9px 12px;
+  background:var(--bg3);
+  border:1.5px solid var(--border);
+  border-radius:8px;font-size:.9rem;
+  margin-bottom:12px;direction:rtl;
+  font-family:'Heebo',Arial;color:var(--text1);
+}
+.modal-btns{display:flex;gap:8px}
+.modal-btns button{
+  flex:1;padding:10px;border:none;border-radius:8px;
+  font-weight:700;cursor:pointer;font-size:.88rem;
+  font-family:'Heebo',Arial;transition:opacity .2s;
+}
+.modal-btns button:hover{opacity:.85}
+
+/* RATE TYPE BUTTONS */
+.type-btn{
+  flex:1;padding:9px;border-radius:9px;
+  border:1.5px solid var(--border);
+  background:var(--bg3);color:var(--text2);
+  font-weight:700;cursor:pointer;
+  font-family:'Heebo',Arial;font-size:.82rem;
+  transition:all .2s;
+}
+.type-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* CALC BOX */
+.calc-box{
+  background:var(--bg3);
+  border:1.5px solid rgba(79,142,247,.3);
+  border-radius:12px;padding:16px;margin-bottom:14px;
+}
+.calc-row{display:flex;justify-content:space-between;padding:4px 0;font-size:.85rem;color:var(--text2)}
+.calc-row b{color:var(--text1)}
+.calc-total{
+  border-top:1px solid var(--border);
+  margin-top:10px;padding-top:10px;
+  display:flex;justify-content:space-between;
+  align-items:center;font-weight:700;
+}
+
+/* HINT */
+.hint{font-size:.75rem;color:var(--text3);margin-top:5px}
+
+/* ERR/WARN BOXES */
+.err-box{
+  background:rgba(248,113,113,.1);
+  border:1.5px solid rgba(248,113,113,.3);
+  border-radius:10px;padding:14px;
+  margin-bottom:12px;color:var(--red);
+  font-size:.82rem;line-height:2;
+}
+.warn-box{
+  background:rgba(251,191,36,.1);
+  border:1.5px solid rgba(251,191,36,.3);
+  border-radius:10px;padding:14px;
+  margin-bottom:12px;color:var(--yellow);font-size:.85rem;
+}
+.dup-box{
+  background:rgba(79,142,247,.1);
+  border:1.5px solid rgba(79,142,247,.3);
+  border-radius:10px;padding:12px;margin-bottom:10px;font-size:.83rem;
+}
+.dup-row{display:flex;align-items:center;gap:8px;padding:3px 0}
+
+/* INLINE BUTTONS */
+.btn-add-inline{
+  background:rgba(79,142,247,.15);border:1px solid var(--accent);
+  color:var(--accent);border-radius:6px;
+  padding:2px 8px;font-size:.72rem;cursor:pointer;
+  margin-right:6px;font-family:'Heebo',Arial;
+}
+
+/* RATE ROW */
+.rrow{
+  display:flex;gap:8px;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--border);
+  flex-wrap:wrap;
+}
+.rrow:last-child{border-bottom:none}
+.rrow input{
+  flex:1;padding:8px 10px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:7px;font-family:'Heebo',Arial;
+  font-size:.82rem;direction:rtl;color:var(--text1);
+}
+.del{background:none;border:none;cursor:pointer;color:var(--red);font-size:1.1rem;padding:4px 8px}
+
+/* MIFRA ROW */
+.mifra-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 0;border-bottom:1px solid var(--border);
+}
+.mifra-row:last-child{border-bottom:none}
+.mifra-name{font-weight:700;font-size:.9rem}
+.mifra-meta{font-size:.75rem;color:var(--text3);margin-top:2px}
+.mifra-amount{font-weight:800;color:var(--green);font-size:1rem}
+
+/* WORKER CHECKBOX */
+.worker-chk-label{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 6px;border-bottom:1px solid var(--border);
+  cursor:pointer;font-size:.88rem;
+}
+.worker-chk-label:last-child{border-bottom:none}
+.worker-chk-label input[type=checkbox]{
+  width:17px;height:17px;cursor:pointer;accent-color:var(--accent);
+}
+
+/* REPORT RESULT */
+.report-result{
+  margin-top:14px;padding:14px;
+  background:rgba(52,211,153,.1);
+  border:1px solid rgba(52,211,153,.3);
+  border-radius:10px;
+  text-align:center;font-weight:700;
+  color:var(--green);font-size:.9rem;
+  display:none;
+}
+
+/* LOADING SPINNER */
+.loading{text-align:center;color:var(--text3);padding:24px;font-size:.85rem}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* RESPONSIVE */
+@media(max-width:480px){
+  .tabs .tab{font-size:.72rem;padding:8px 5px}
+  .crd{padding:14px}
+  table{font-size:.76rem}
+  th,td{padding:6px 7px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="logo-header.png" alt="אורסיד" class="header-logo">
+  <span class="header-title">ניהול עובדים</span>
+</div>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab on" id="tab0" onclick="showTab(0)">📥 ייבוא</button>
+    <button class="tab" id="tab1" onclick="showTab(1)">👷 עובדים</button>
+    <button class="tab" id="tab4" onclick="showTab(4)">💸 מפרעות</button>
+    <button class="tab" id="tab2" onclick="showTab(2)">📄 דוח מזמין</button>
+    <button class="tab" id="tab3" onclick="showTab(3)">💵 משכורות</button>
+  </div>
+</div>
+
+<div class="con">
+
+  <!-- TAB 0 — ייבוא + הוספה ידנית -->
+  <div id="tabC0">
+
+    <div class="crd">
+      <h2>📥 הדבק רשימת עובדים</h2>
+      <div class="fg">
+        <label>הודעה מהעובד</label>
+        <textarea id="rawText" placeholder="25/02/2026&#10;* חוסני , סלימאן، אבראהים (משמר הנגב)&#10;* ראעב , סאלם (תקשוב)"></textarea>
+      </div>
+      <button class="btn bp" onclick="parseList()">🔍 פענח רשימה</button>
+    </div>
+
+    <div class="crd" id="previewCard" style="display:none">
+      <h2 id="previewTitle">תצוגה מקדימה</h2>
+      <p class="hint">✅ = סכום קבוע אוטומטי | ריק = מלא ידנית</p><br>
+      <div id="errorsBox"></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>שם עובד</th><th>פרויקט</th><th>תאריך</th><th>כניסה</th><th>יציאה</th><th>סכום ₪</th><th></th></tr></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div><br>
+      <button class="btn bg" id="submitBtn" onclick="submitAll()">✅ שלח הכל לשיטס</button>
+    </div>
+
+    <!-- הוספה ידנית -->
+    <div class="crd">
+      <h2>✏️ הוספה ידנית של עובד</h2>
+      <p class="hint">רישום עובד בודד עם בחירת סוג תשלום</p><br>
+
+      <!-- סוג תשלום -->
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button id="manualBtnDaily" class="type-btn on" onclick="setManualEntryType('יומי')">📅 יומי קבוע</button>
+        <button id="manualBtnHourly" class="type-btn" onclick="setManualEntryType('שעתי')">🕐 לפי שעה</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label class="lbl">שם עובד</label>
+          <select id="manualName" onchange="onManualNameChange()" class="sel">
+            <option value="">בחר עובד...</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">פרויקט</label>
+          <select id="manualProject" onchange="manualFillRate()" class="sel">
+            <option value="">בחר פרויקט...</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <label class="lbl">תאריך</label>
+        <input type="date" id="manualDate" class="inp">
+      </div>
+
+      <!-- שדות שעתי -->
+      <div id="manualHourlyFields">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div>
+            <label class="lbl">שעת כניסה</label>
+            <input type="time" id="manualStart" onchange="manualCalc()" class="inp">
+          </div>
+          <div>
+            <label class="lbl">שעת יציאה</label>
+            <input type="time" id="manualEnd" onchange="manualCalc()" class="inp">
+          </div>
+        </div>
+        <div style="margin-bottom:12px">
+          <label class="lbl">תעריף לשעה (₪)</label>
+          <input type="number" id="manualHourlyRate" placeholder="לדוגמה: 45" oninput="manualCalc()" class="inp">
+        </div>
+        <div id="manualCalcBox" class="calc-box" style="display:none">
+          <div style="font-weight:700;color:var(--accent);margin-bottom:8px">📊 פירוט חישוב</div>
+          <div id="manualCalcDetail"></div>
+          <div class="calc-total">
+            <span style="color:var(--text2)">סה"כ לתשלום:</span>
+            <span id="manualCalcTotal" style="font-size:1.1rem;color:var(--green)"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- שדות יומי -->
+      <div id="manualDailyFields" style="display:none">
+        <div style="margin-bottom:12px">
+          <label class="lbl">סכום יומי (₪)</label>
+          <input type="number" id="manualDailyAmount" placeholder="לדוגמה: 500" oninput="manualDailyCalc()" class="inp">
+          <p class="hint" id="manualDailyHint"></p>
+        </div>
+        <div id="manualDailyCalcBox" class="calc-box" style="display:none">
+          <div class="calc-total">
+            <span style="color:var(--text2)">סכום יומי:</span>
+            <span id="manualDailyTotal" style="font-size:1.1rem;color:var(--green)"></span>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="doManualEntry()" class="btn bg" style="margin-top:4px">✅ שמור לשיטס</button>
+    </div>
+  </div>
+
+  <!-- TAB 1 — עובדים -->
+  <div id="tabC1" style="display:none">
+    <div class="crd">
+      <h2>הוספת עובד למערכת</h2>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button id="btnTypeDaily" class="type-btn on" onclick="setRateType('יומי')">📅 יומי קבוע</button>
+        <button id="btnTypeHourly" class="type-btn" onclick="setRateType('שעתי')">🕐 לפי שעה</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <input id="nwName" placeholder="שם עובד" style="flex:2;min-width:100px;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;direction:rtl;color:var(--text1)">
+        <div style="flex:2;min-width:100px;position:relative">
+          <input id="nwProj" placeholder="פרויקט" list="projectsList" autocomplete="off"
+            style="width:100%;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;direction:rtl;color:var(--text1)">
+          <datalist id="projectsList"></datalist>
+        </div>
+        <input id="nwAmt" type="number" placeholder="₪/יום" style="flex:1;min-width:80px;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;color:var(--text1)">
+        <input id="nwHourly" type="number" placeholder="₪/שעה" style="flex:1;min-width:80px;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;color:var(--text1);display:none">
+        <button onclick="addRate()" style="padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:1.1rem">➕</button>
+      </div>
+      <p class="hint" id="rateTypeHint">💡 הגדר תעריף לעובד — יומלא אוטומטית בייבוא רשימה</p><br>
+      <div id="ratesList"></div><br>
+      <button class="btn bo" onclick="saveRates()">💾 שמור סכומים לשיטס</button>
+    </div>
+  </div>
+
+  <!-- TAB 4 — מפרעות -->
+  <div id="tabC4" style="display:none">
+    <div class="crd" style="margin-bottom:14px">
+      <h2>➕ הוסף מפרעה</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label class="lbl">שם עובד</label>
+          <select id="mifraName" class="sel"><option value="">בחר עובד...</option></select>
+        </div>
+        <div>
+          <label class="lbl">סכום (₪)</label>
+          <input type="number" id="mifraAmount" placeholder="300" class="inp">
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <label class="lbl">תאריך</label>
+        <input type="date" id="mifraDate" class="inp">
+      </div>
+      <div style="margin-bottom:10px">
+        <label class="lbl">פרויקט (אופציונלי)</label>
+        <input type="text" id="mifraProject" placeholder="שם פרויקט..." class="inp" list="mifraProjectsList">
+        <datalist id="mifraProjectsList"></datalist>
+      </div>
+      <div style="margin-bottom:12px">
+        <label class="lbl">הערה (אופציונלי)</label>
+        <input type="text" id="mifraNote" placeholder="מפרעה..." class="inp">
+      </div>
+      <button onclick="doAddMifra()" class="btn bp">✅ הוסף מפרעה</button>
+    </div>
+
+    <div class="crd" style="margin-bottom:14px">
+      <h2>📊 דוח מפרעות לחודש</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label class="lbl">עובד</label>
+          <select id="mifraReportWorker" class="sel"><option value="">כל העובדים</option></select>
+        </div>
+        <div>
+          <label class="lbl">חודש</label>
+          <select id="mifraReportMonth" class="sel"><option value="">בחר חודש...</option></select>
+        </div>
+      </div>
+      <button onclick="doMifraReport()" class="btn bg">📄 הוצא דוח מפרעות</button>
+    </div>
+
+    <div class="crd">
+      <h2>📋 היסטוריית מפרעות</h2>
+      <div id="mifraList" class="loading">טוען...</div>
+    </div>
+  </div>
+
+  <!-- TAB 2 — דוח מזמין -->
+  <div id="tabC2" style="display:none">
+    <div class="crd">
+      <h2>הכן דוח למזמין</h2>
+      <p class="hint">בחר חודש ופרויקט ליצירת דוח מפורט בשיטס</p><br>
+      <div class="fg">
+        <label>בחר חודש</label>
+        <select id="selMonth" class="sel"></select>
+      </div>
+      <div class="fg">
+        <label>בחר פרויקט</label>
+        <select id="selProject" class="sel"></select>
+      </div>
+      <div class="fg">
+        <label>תשלום ליום לעובד ₪ (אופציונלי)</label>
+        <input id="overrideRate" type="number" placeholder="לדוגמה: 900" class="inp">
+      </div>
+      <button class="btn bg" id="genReportBtn" onclick="generateReportUI()">📋 הכן דוח</button>
+      <div id="reportResult" class="report-result"></div>
+    </div>
+  </div>
+
+  <!-- TAB 3 — משכורות -->
+  <div id="tabC3" style="display:none">
+    <div class="crd">
+      <h2>דוח משכורת לעובד</h2>
+      <p class="hint">בחר חודש וסמן עובדים — כל עובד יקבל גיליון נפרד</p><br>
+      <div class="fg">
+        <label>בחר חודש</label>
+        <select id="salMonth" class="sel" onchange="renderWorkerCheckboxes()"></select>
+      </div>
+      <div class="fg" style="margin-top:12px">
+        <label style="display:flex;justify-content:space-between;align-items:center">
+          <span>בחר עובדים</span>
+          <button onclick="toggleAllSalWorkers()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 12px;font-size:.75rem;cursor:pointer;font-family:'Heebo',Arial" id="btnSelectAllSal">בחר הכל</button>
+        </label>
+        <div id="workerCheckboxes" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:4px;margin-top:8px;max-height:240px;overflow-y:auto"></div>
+      </div>
+      <button class="btn bp" id="genSalBtn" onclick="generateSalaryUI()" style="margin-top:14px">💵 הכן דוחות</button>
+      <div id="salResult" class="report-result"></div>
+    </div>
+  </div>
+
+</div><!-- /con -->
+
+<div class="toast" id="tst"></div>
+
+<!-- מודאל הוספת עובד -->
+<div class="overlay" id="addEmpModal">
+  <div class="modal" style="width:340px">
+    <h3>➕ הוספת עובד למערכת</h3>
+    <label>שם עובד</label>
+    <input type="text" id="modalEmpName" readonly style="background:var(--bg3);opacity:.7">
+    <label>פרויקט</label>
+    <input type="text" id="modalEmpProj" placeholder="בחר או הקלד פרויקט..." list="modalProjectsList" autocomplete="off">
+    <datalist id="modalProjectsList"></datalist>
+    <label style="margin-top:2px">סוג תעריף</label>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button id="modalBtnDaily" class="type-btn on" onclick="setModalRateType('יומי')">📅 יומי</button>
+      <button id="modalBtnHourly" class="type-btn" onclick="setModalRateType('שעתי')">🕐 שעתי</button>
+    </div>
+    <label id="modalAmtLabel">סכום יומי ₪</label>
+    <input type="number" id="modalEmpAmt" placeholder="לדוגמה: 500">
+    <div class="modal-btns">
+      <button style="background:var(--accent);color:#fff" onclick="saveNewEmployee()">שמור</button>
+      <button style="background:var(--bg3);color:var(--text2)" onclick="closeEmpModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- מודאל כפילויות -->
+<div class="overlay" id="dupModal">
+  <div class="modal" style="width:380px;max-height:80vh;overflow-y:auto">
+    <h3>⚠️ נמצאו רשומות קיימות</h3>
+    <div id="dupContent"></div>
+    <div class="modal-btns" style="margin-top:14px;flex-wrap:wrap;gap:8px">
+      <button style="background:var(--green);color:#0a0e1a" onclick="submitOnlyNew()">➕ הוסף רק חדשים</button>
+      <button style="background:var(--red);color:#fff" onclick="submitAllAnyway()">🔄 הוסף הכל</button>
+      <button style="background:var(--bg3);color:var(--text2)" onclick="closeDupModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- מודאל מחיקת עובד -->
+<div class="overlay" id="deleteWorkerModal">
+  <div class="modal" style="width:360px">
+    <h3 style="color:var(--red)">🗑️ הסר עובד מהאפליקציה</h3>
+    <div id="deleteWorkerSummary" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:12px;margin-bottom:14px;font-size:.85rem;line-height:2;color:var(--text1)"></div>
+    <p style="font-size:.82rem;color:var(--red);font-weight:700;margin-bottom:14px">⚠️ פעולה זו בלתי הפיכה!</p>
+    <div class="modal-btns">
+      <button id="confirmDeleteBtn" style="background:var(--red);color:#fff" onclick="confirmDeleteWorker()">🗑️ הסר עובד</button>
+      <button style="background:var(--bg3);color:var(--text2)" onclick="document.getElementById('deleteWorkerModal').classList.remove('on')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== CONFIG =====
+var APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+
+var rates = [];
+var parsedRows = [];
+var heMonths = ["","ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+
+// ===== API CALL =====
+function apiCall(action, payload, onSuccess, onError) {
+  var url = APPS_SCRIPT_URL;
+  if (!payload) {
+    fetch(url + '?action=' + action)
+      .then(function(r){ return r.json(); })
+      .then(function(d){ onSuccess(d.data !== undefined ? d.data : d); })
+      .catch(function(e){ if(onError) onError(e); });
+  } else {
+    var body = JSON.stringify({action: action, payload: payload});
+    fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body: body
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ onSuccess(d.data !== undefined ? d.data : d); })
+      .catch(function(e){ if(onError) onError(e); });
+  }
+}
+
+// ===== TABS =====
+function showTab(n) {
+  if (n === 1) loadRates();
+  if (n === 2) loadReportData();
+  if (n === 3) loadSalaryData();
+  if (n === 4) loadMifraotTab();
+  [0,1,2,3,4].forEach(function(i) {
+    var c = document.getElementById("tabC"+i);
+    var b = document.getElementById("tab"+i);
+    if(c) c.style.display = i===n ? "block" : "none";
+    if(b) b.className = "tab" + (i===n ? " on" : "");
+  });
+}
+
+function showToast(m, c) {
+  var t = document.getElementById("tst");
+  t.style.background = c || "var(--green)";
+  t.style.color = c ? "#fff" : "#0a0e1a";
+  t.textContent = m;
+  t.classList.add("on");
+  setTimeout(function(){ t.classList.remove("on"); }, 2800);
+}
+
+// ===== RATES =====
+function getRate(name, proj) {
+  for (var i = 0; i < rates.length; i++) {
+    var r = rates[i];
+    if (r.name === name.trim() && r.project === proj.trim()) {
+      if (r.rateType === "שעתי" && r.hourlyRate) return Math.round(r.hourlyRate * 8);
+      return r.amount || "";
+    }
+  }
+  return "";
+}
+
+var _rateType = "יומי";
+
+function setRateType(type) {
+  _rateType = type;
+  var isH = type === "שעתי";
+  document.getElementById("btnTypeDaily").className = "type-btn" + (isH ? "" : " on");
+  document.getElementById("btnTypeHourly").className = "type-btn" + (isH ? " on" : "");
+  document.getElementById("nwAmt").style.display    = isH ? "none" : "";
+  document.getElementById("nwHourly").style.display = isH ? "" : "none";
+  document.getElementById("rateTypeHint").textContent = isH
+    ? "💡 תעריף לשעת עבודה — יחושב אוטומטית בהוספה ידנית"
+    : "💡 הגדר תעריף לעובד — יומלא אוטומטית בייבוא רשימה";
+}
+
+function renderRates() {
+  var el = document.getElementById("ratesList");
+  if (!rates.length) {
+    el.innerHTML = "<div class='loading'>אין סכומים קבועים עדיין</div>";
+    return;
+  }
+  var html = "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px'>";
+  html += "<label style='font-size:.8rem;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px'><input type='checkbox' id='chkAll' onchange='toggleAllWorkers(this.checked)' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent)'> בחר הכל</label>";
+  html += "<button id='btnDeleteSelected' onclick='deleteSelectedWorkers()' style='display:none;background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3);border-radius:7px;padding:6px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial'>🗑️ הסר נבחרים</button>";
+  html += "</div>";
+  rates.forEach(function(r, i) {
+    var isH = (r.rateType === "שעתי");
+    var badge = isH
+      ? "<span class='badge-yellow'>🕐 שעתי</span>"
+      : "<span class='badge-green'>📅 יומי</span>";
+    html += "<div class='rrow'>";
+    html += "<input type='checkbox' class='workerChk' data-name='"+r.name+"' onchange='updateDeleteBtn()' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0'>";
+    html += "<input value='"+r.name+"' onchange='rates["+i+"].name=this.value' placeholder='שם' style='flex:2;min-width:80px'>";
+    html += "<input value='"+r.project+"' onchange='rates["+i+"].project=this.value' placeholder='פרויקט' style='flex:2;min-width:80px'>";
+    if (isH) {
+      html += "<input type='number' value='"+(r.hourlyRate||0)+"' onchange='rates["+i+"].hourlyRate=this.value' placeholder='₪/שעה' style='flex:1;min-width:65px'>";
+    } else {
+      html += "<input type='number' value='"+(r.amount||0)+"' onchange='rates["+i+"].amount=this.value' placeholder='₪/יום' style='flex:1;min-width:65px'>";
+    }
+    html += badge;
+    html += "</div>";
+  });
+  el.innerHTML = html;
+}
+
+function addRate() {
+  var n = document.getElementById("nwName").value.trim();
+  var p = document.getElementById("nwProj").value.trim();
+  var isH = (_rateType === "שעתי");
+  var a = isH ? document.getElementById("nwHourly").value : document.getElementById("nwAmt").value;
+  if (!n||!p||!a) { showToast("מלא שם, פרויקט וסכום","var(--orange)"); return; }
+  var newWorker = {name:n,project:p,amount:isH?0:parseFloat(a),rateType:_rateType,hourlyRate:isH?parseFloat(a):0};
+  rates.push(newWorker);
+  document.getElementById("nwName").value="";
+  document.getElementById("nwProj").value="";
+  document.getElementById("nwAmt").value="";
+  document.getElementById("nwHourly").value="";
+  renderRates(); refreshProjectsList();
+  apiCall('appendWorkerRate', {worker: newWorker}, function(){
+    apiCall('getWorkerRates', null, function(data){
+      rates = data || [];
+      renderRates(); loadManualSelects(); loadMifraotTab(); refreshProjectsList();
+      showToast(n+" ("+p+") נוסף ✅");
+    });
+  }, function(e){ showToast(e.message || "שגיאה","var(--red)"); });
+}
+
+function saveRates() {
+  apiCall('saveWorkerRates', {rates: rates}, function(){
+    showToast("נשמר בשיטס ✅");
+  }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
+}
+
+function loadRates() {
+  apiCall('getWorkerRates', null, function(data){
+    rates = data || [];
+    renderRates(); loadManualSelects(); refreshProjectsList();
+  });
+}
+loadRates();
+
+function refreshProjectsList() {
+  var dl = document.getElementById("projectsList");
+  var dl2 = document.getElementById("mifraProjectsList");
+  if (!dl) return;
+  var seen = {};
+  dl.innerHTML = "";
+  if(dl2) dl2.innerHTML = "";
+  rates.forEach(function(r) {
+    if (r.project && !seen[r.project]) {
+      seen[r.project] = 1;
+      [dl, dl2].forEach(function(d){ if(d){ var opt=document.createElement("option"); opt.value=r.project; d.appendChild(opt); }});
+    }
+  });
+  apiCall('getProjectsList', null, function(projs){
+    projs.forEach(function(p) {
+      if (!seen[p]) {
+        seen[p] = 1;
+        [dl, dl2].forEach(function(d){ if(d){ var opt=document.createElement("option"); opt.value=p; d.appendChild(opt); }});
+      }
+    });
+  });
+}
+
+// ===== הוספה ידנית =====
+var _manualTotal = 0;
+var _manualHours = 0;
+var _manualEntryType = "שעתי";
+
+function setManualEntryType(type) {
+  _manualEntryType = type;
+  var isH = type === "שעתי";
+  document.getElementById("manualBtnHourly").className = "type-btn" + (isH ? " on" : "");
+  document.getElementById("manualBtnDaily").className  = "type-btn" + (isH ? "" : " on");
+  document.getElementById("manualHourlyFields").style.display = isH ? "block" : "none";
+  document.getElementById("manualDailyFields").style.display  = isH ? "none" : "block";
+  _manualTotal = 0; _manualHours = 0;
+  // מלא סכום אוטומטי אם יש עובד ופרויקט
+  manualFillRate();
+}
+
+function loadManualSelects() {
+  document.getElementById("manualDate").value = new Date().toISOString().split("T")[0];
+  document.getElementById("manualProject").innerHTML = "<option value=''>בחר פרויקט...</option>";
+  apiCall('getWorkersList', null, function(workers){
+    var sel = document.getElementById("manualName");
+    sel.innerHTML = "<option value=''>בחר עובד...</option>";
+    workers.forEach(function(w){ sel.innerHTML += "<option value='"+w+"'>"+w+"</option>"; });
+  });
+}
+
+function getWorkerRecord(name, proj) {
+  for (var i = 0; i < rates.length; i++) {
+    if (rates[i].name === name.trim() && rates[i].project === proj.trim()) return rates[i];
+  }
+  return null;
+}
+
+function onManualNameChange() {
+  var name = document.getElementById("manualName").value;
+  var sel2 = document.getElementById("manualProject");
+  sel2.innerHTML = "<option value=''>בחר פרויקט...</option>";
+  document.getElementById("manualHourlyRate").value = "";
+  document.getElementById("manualCalcBox").style.display = "none";
+  document.getElementById("manualDailyCalcBox").style.display = "none";
+  if (!name) return;
+  var workerRecs = rates.filter(function(r){ return r.name === name; });
+  workerRecs.forEach(function(r){ sel2.innerHTML += "<option value='"+r.project+"'>"+r.project+"</option>"; });
+  if (workerRecs.length === 1) { sel2.value = workerRecs[0].project; manualFillRate(); }
+}
+
+function manualFillRate() {
+  var name = document.getElementById("manualName").value;
+  var proj = document.getElementById("manualProject").value;
+  if (!name || !proj) return;
+  var rec = getWorkerRecord(name, proj);
+  if (!rec) return;
+
+  if (_manualEntryType === "שעתי") {
+    if (rec.rateType === "שעתי" && rec.hourlyRate) {
+      document.getElementById("manualHourlyRate").value = rec.hourlyRate;
+    } else if (rec.amount) {
+      document.getElementById("manualHourlyRate").value = Math.round(parseFloat(rec.amount) / 8);
+    }
+    manualCalc();
+  } else {
+    // יומי — מלא סכום קבוע
+    var dailyAmt = rec.rateType === "שעתי" ? Math.round((rec.hourlyRate||0)*8) : (rec.amount||0);
+    document.getElementById("manualDailyAmount").value = dailyAmt || "";
+    document.getElementById("manualDailyHint").textContent = dailyAmt ? "✅ סכום קבוע מהמערכת: ₪"+dailyAmt : "";
+    manualDailyCalc();
+  }
+}
+
+function manualDailyCalc() {
+  var amt = parseFloat(document.getElementById("manualDailyAmount").value);
+  var box = document.getElementById("manualDailyCalcBox");
+  if (!amt || amt <= 0) { box.style.display = "none"; _manualTotal = 0; return; }
+  _manualTotal = amt;
+  document.getElementById("manualDailyTotal").textContent = "₪" + amt.toLocaleString();
+  box.style.display = "block";
+}
+
+function manualCalc() {
+  var start = document.getElementById("manualStart").value;
+  var end   = document.getElementById("manualEnd").value;
+  var rate  = parseFloat(document.getElementById("manualHourlyRate").value);
+  var box   = document.getElementById("manualCalcBox");
+  if (!start || !end || !rate) { box.style.display = "none"; return; }
+  var startMin = parseInt(start.split(":")[0])*60 + parseInt(start.split(":")[1]);
+  var endMin   = parseInt(end.split(":")[0])*60   + parseInt(end.split(":")[1]);
+  if (endMin <= startMin) endMin += 1440;
+  var totalH = (endMin - startMin) / 60;
+  var reg = Math.min(totalH, 8), ot1 = Math.max(0, Math.min(totalH-8, 2)), ot2 = Math.max(0, totalH-10);
+  var payReg = reg*rate, payOt1 = ot1*rate*1.25, payOt2 = ot2*rate*1.50;
+  var total = payReg + payOt1 + payOt2;
+  _manualTotal = Math.round(total); _manualHours = totalH;
+  function fH(h){ var hr=Math.floor(h),mn=Math.round((h-hr)*60); return hr+(mn>0?":"+String(mn).padStart(2,"0"):"")+" שע'"; }
+  function fS(n){ return "₪"+Math.round(n).toLocaleString(); }
+  var html = "<div class='calc-row'><span>🕐 סה\"כ שעות</span><b>"+fH(totalH)+"</b></div>";
+  html += "<div class='calc-row'><span>📗 רגיל ("+fH(reg)+" × "+fS(rate)+")</span><b>"+fS(payReg)+"</b></div>";
+  if (ot1>0) html += "<div class='calc-row'><span>📙 125% ("+fH(ot1)+")</span><b>"+fS(payOt1)+"</b></div>";
+  if (ot2>0) html += "<div class='calc-row'><span>📕 150% ("+fH(ot2)+")</span><b>"+fS(payOt2)+"</b></div>";
+  document.getElementById("manualCalcDetail").innerHTML = html;
+  document.getElementById("manualCalcTotal").textContent = fS(total);
+  box.style.display = "block";
+}
+
+function doManualEntry() {
+  var name    = document.getElementById("manualName").value;
+  var project = document.getElementById("manualProject").value;
+  var date    = document.getElementById("manualDate").value;
+  if (!name||!project||!date) { showToast("נא לבחור עובד, פרויקט ותאריך","var(--orange)"); return; }
+
+  var note = "נוכחות";
+  if (_manualEntryType === "שעתי") {
+    var start = document.getElementById("manualStart").value;
+    var end   = document.getElementById("manualEnd").value;
+    var rate  = document.getElementById("manualHourlyRate").value;
+    if (!start||!end||!rate) { showToast("נא למלא שעות ותעריף","var(--orange)"); return; }
+    if (!_manualTotal) { showToast("בדוק שעות ותעריף","var(--orange)"); return; }
+    note = "כניסה "+start+" יציאה "+end+" ("+_manualHours.toFixed(1)+" שע')";
+  } else {
+    if (!_manualTotal) {
+      var amt = parseFloat(document.getElementById("manualDailyAmount").value);
+      if (!amt) { showToast("נא להזין סכום יומי","var(--orange)"); return; }
+      _manualTotal = amt;
+    }
+  }
+
+  apiCall('addBulkEntries', {entries:[{name:name,amount:_manualTotal,date:date,project:project,note:note}]},
+    function(){
+      showToast(name+" נשמר ✅");
+      document.getElementById("manualName").value="";
+      document.getElementById("manualProject").value="";
+      document.getElementById("manualStart").value="";
+      document.getElementById("manualEnd").value="";
+      document.getElementById("manualHourlyRate").value="";
+      document.getElementById("manualDailyAmount").value="";
+      document.getElementById("manualCalcBox").style.display="none";
+      document.getElementById("manualDailyCalcBox").style.display="none";
+      _manualTotal=0; _manualHours=0;
+    },
+    function(e){ showToast(e.message||"שגיאה","var(--red)"); }
+  );
+}
+
+// ===== פענוח רשימה =====
+function parseDate(str) {
+  var m = str.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+  if (!m) return "";
+  var d=m[1].padStart(2,"0"),mo=m[2].padStart(2,"0"),y=m[3].length===2?"20"+m[3]:m[3];
+  return y+"-"+mo+"-"+d;
+}
+function validateDateISO(iso) {
+  if (!iso) return {err:"חסר תאריך"};
+  var p=iso.split("-"),month=parseInt(p[1]),day=parseInt(p[2]),year=parseInt(p[0]);
+  if (month<1||month>12) return {err:"חודש לא תקין"};
+  if (day<1||day>new Date(year,month,0).getDate()) return {err:"יום לא תקין"};
+  if (year!==new Date().getFullYear()) return {warn:true,iso:iso};
+  return null;
+}
+function levenshtein(a,b) {
+  var dp=[];
+  for(var i=0;i<=a.length;i++){dp[i]=[i];for(var j=1;j<=b.length;j++) dp[i][j]=i===0?j:0;}
+  for(var i=1;i<=a.length;i++) for(var j=1;j<=b.length;j++) dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  return dp[a.length][b.length];
+}
+function findClosest(name) {
+  var best=null,bestScore=0;
+  rates.forEach(function(r){
+    var dist=levenshtein(name,r.name);
+    var score=(Math.max(name.length,r.name.length)-dist)/Math.max(name.length,r.name.length);
+    if(score>bestScore){bestScore=score;best=r.name;}
+  });
+  return bestScore>=0.6?best:null;
+}
+
+function parseList() {
+  var raw=document.getElementById("rawText").value.trim();
+  if(!raw){showToast("הדבק טקסט קודם","var(--orange)");return;}
+  var lines=raw.split("\n");
+  parsedRows=[]; var errors=[];
+  var blocks=[],currentDate="",currentLines=[];
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i].trim();
+    var d=parseDate(line);
+    if(d){if(currentDate&&currentLines.length) blocks.push({date:currentDate,lines:currentLines});currentDate=d;currentLines=[];}
+    else if(line.startsWith("*")) currentLines.push(line);
+  }
+  if(currentLines.length) blocks.push({date:currentDate,lines:currentLines});
+  if(!blocks.length&&currentLines.length) blocks.push({date:"",lines:currentLines});
+  blocks.forEach(function(block){
+    var dateVal=validateDateISO(block.date);
+    if(dateVal&&dateVal.err){var dp=block.date?block.date.split("-"):[];var disp=dp.length===3?dp[2]+"/"+dp[1]+"/"+dp[0]:"חסר";errors.push("תאריך \""+disp+"\": "+dateVal.err);}
+    if(dateVal&&dateVal.warn){var dp2=block.date.split("-");block._warnDate=dp2[2]+"/"+dp2[1]+"/"+dp2[0];}
+    block.lines.forEach(function(line){
+      line=line.replace(/^\*\s*/,"");
+      var proj="";
+      var pm=line.match(/[\(\uFF08]([^\)\uFF09]+)[\)\uFF09]/);
+      if(pm){proj=pm[1].trim();line=line.replace(pm[0],"").trim();}
+      if(!proj) errors.push("שורה \""+line.trim()+"\": חסר פרויקט (בסוגריים)");
+      var hasSep=line.indexOf(",")>=0||line.indexOf("\u060C")>=0||line.indexOf("\u061B")>=0;
+      if(!hasSep&&line.split(" ").filter(Boolean).length>=2){errors.push("שורה \""+line+"\": חסר פסיק בין שמות");return;}
+      var names=line.split(/[,\u060C\u061B]/).map(function(n){return n.trim();}).filter(Boolean);
+      names.forEach(function(nm){
+        var knownNames=rates.map(function(r){return r.name;});
+        if(knownNames.indexOf(nm)<0){
+          var closest=knownNames.length>0?findClosest(nm):null;
+          if(closest) errors.push("שם \""+nm+"\": לא מוכר — האם התכוונת ל\""+closest+"\"? <button class='btn-add-inline' style='background:rgba(52,211,153,.2);color:var(--green);border-color:var(--green)' onclick='acceptSuggestion(\""+nm+"\",\""+closest+"\")'>✅ כן</button> <button class='btn-add-inline' onclick='openEmpModal(\""+nm+"\")'>❌ לא</button>");
+          else errors.push("שם \""+nm+"\": לא קיים <button class='btn-add-inline' onclick='openEmpModal(\""+nm+"\")'>➕ הוסף</button>");
+        }
+        parsedRows.push({name:nm,project:proj,date:block.date,amount:getRate(nm,proj),auto:getRate(nm,proj)!==""});
+      });
+    });
+  });
+  if(!parsedRows.length){showToast("לא נמצאו עובדים","var(--orange)");return;}
+  var errBox=document.getElementById("errorsBox");
+  var warnDates=blocks.filter(function(b){return b._warnDate;});
+  if(warnDates.length&&!errors.length){
+    var yr=new Date().getFullYear();
+    var wh="<div class='warn-box'><b>⚠️ תאריכים שלא בשנת "+yr+":</b><br>";
+    warnDates.forEach(function(b){wh+="• "+b._warnDate+"<br>";});
+    wh+="<br><button onclick='confirmWarnDates()' style='background:var(--green);color:#0a0e1a;border:none;padding:6px 14px;border-radius:7px;margin-left:8px;cursor:pointer;font-family:Heebo,Arial'>✅ המשך</button>";
+    wh+="<button onclick='cancelWarnDates()' style='background:var(--red);color:#fff;border:none;padding:6px 14px;border-radius:7px;cursor:pointer;font-family:Heebo,Arial'>✏️ תקן</button></div>";
+    errBox.innerHTML=wh;
+    document.getElementById("previewTitle").textContent="⚠️ תאריך מחוץ לשנה הנוכחית";
+    document.getElementById("submitBtn").disabled=true;
+  } else if(errors.length){
+    errBox.innerHTML="<div class='err-box'><b>⚠️ שגיאות:</b><br>• "+errors.join("<br>• ")+"</div>";
+    document.getElementById("previewTitle").textContent="⚠️ נמצאו "+errors.length+" שגיאות";
+    document.getElementById("submitBtn").disabled=true;
+  } else {
+    errBox.innerHTML="";
+    document.getElementById("submitBtn").disabled=false;
+    var datesFound=[];
+    parsedRows.forEach(function(r){if(r.date&&datesFound.indexOf(r.date)<0) datesFound.push(r.date);});
+    document.getElementById("previewTitle").textContent="נמצאו "+parsedRows.length+" עובדים | "+datesFound.length+" ימים";
+    showToast("זוהו "+parsedRows.length+" עובדים ✅");
+  }
+  renderPreview();
+  document.getElementById("previewCard").style.display="block";
+}
+
+function calcHourlyAmount(hourlyRate, hours) {
+  hours = parseFloat(hours)||0; if(hours<=0) return 0;
+  var reg=Math.min(hours,8)*hourlyRate,ot1=Math.max(0,Math.min(hours-8,2))*hourlyRate*1.25,ot2=Math.max(0,hours-10)*hourlyRate*1.50;
+  return Math.round(reg+ot1+ot2);
+}
+function onTimeChange(i, hourlyRate) {
+  var start=document.getElementById("ts"+i).value, end=document.getElementById("te"+i).value;
+  if(!start||!end) return;
+  var startMin=parseInt(start.split(":")[0])*60+parseInt(start.split(":")[1]);
+  var endMin=parseInt(end.split(":")[0])*60+parseInt(end.split(":")[1]);
+  if(endMin<=startMin) endMin+=1440;
+  var hours=(endMin-startMin)/60;
+  var amt=calcHourlyAmount(hourlyRate,hours);
+  document.getElementById("a"+i).value=amt>0?amt:"";
+  document.getElementById("a"+i).dataset.note="כניסה "+start+" יציאה "+end+" ("+hours.toFixed(1)+" שע')";
+}
+
+function renderPreview() {
+  var tb=document.getElementById("previewBody"),html="";
+  for(var i=0;i<parsedRows.length;i++){
+    var r=parsedRows[i];
+    var workerRec=null;
+    for(var ri=0;ri<rates.length;ri++){if(rates[ri].name===r.name&&rates[ri].project===r.project){workerRec=rates[ri];break;}}
+    var isH=workerRec&&workerRec.rateType==="שעתי"&&workerRec.hourlyRate;
+    var dp=r.date?r.date.split("-"):["","",""];
+    var dateFmt=r.date?(dp[2]+"/"+dp[1]+"/"+dp[0]):"-";
+    html+="<tr><td><b>"+r.name+"</b></td><td><span class='badge'>"+(r.project||"-")+"</span></td><td>"+dateFmt+"</td>";
+    if(isH){
+      html+="<td><input type='time' id='ts"+i+"' oninput='onTimeChange("+i+","+workerRec.hourlyRate+")' style='width:82px;background:var(--bg3);border:1px solid var(--yellow);border-radius:5px;padding:4px 5px;font-family:Heebo,Arial;font-size:.8rem;color:var(--text1)'></td>";
+      html+="<td><input type='time' id='te"+i+"' oninput='onTimeChange("+i+","+workerRec.hourlyRate+")' style='width:82px;background:var(--bg3);border:1px solid var(--yellow);border-radius:5px;padding:4px 5px;font-family:Heebo,Arial;font-size:.8rem;color:var(--text1)'></td>";
+      html+="<td><span style='font-size:.66rem;color:var(--yellow);display:block'>🕐 "+workerRec.hourlyRate+"₪/שע</span><input type='number' id='a"+i+"' value='' placeholder='אוטו' style='width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-family:Heebo,Arial;font-size:.82rem;color:var(--text1)'></td>";
+    } else {
+      html+="<td style='color:var(--text3);text-align:center'>—</td><td style='color:var(--text3);text-align:center'>—</td>";
+      var ab=r.auto?"<span class='auto-badge'>✅</span>":"";
+      html+="<td>"+ab+"<input type='number' id='a"+i+"' value='"+r.amount+"' placeholder='סכום' style='width:75px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-family:Heebo,Arial;font-size:.82rem;color:var(--text1)'></td>";
+    }
+    html+="<td><button class='del' onclick='removeRow("+i+")'>✖</button></td></tr>";
+  }
+  tb.innerHTML=html;
+}
+function removeRow(i){ parsedRows.splice(i,1); renderPreview(); }
+
+var pendingEntries={}, existingByDate={};
+function submitAll() {
+  var missing=[];
+  for(var i=0;i<parsedRows.length;i++){
+    var workerRec=null;
+    for(var ri=0;ri<rates.length;ri++){if(rates[ri].name===parsedRows[i].name&&rates[ri].project===parsedRows[i].project){workerRec=rates[ri];break;}}
+    if(workerRec&&workerRec.rateType==="שעתי"){
+      var ts=document.getElementById("ts"+i),te=document.getElementById("te"+i);
+      if(!ts||!ts.value||!te||!te.value) missing.push(parsedRows[i].name);
+    }
+  }
+  if(missing.length>0){showToast("חסרות שעות עבור: "+missing.join(", "),"var(--orange)");return;}
+  pendingEntries=[];
+  for(var i=0;i<parsedRows.length;i++){
+    var amt=document.getElementById("a"+i).value;
+    var aEl=document.getElementById("a"+i);
+    var note=(aEl&&aEl.dataset&&aEl.dataset.note)?aEl.dataset.note:"נוכחות";
+    pendingEntries.push({name:parsedRows[i].name,amount:amt||"0",date:parsedRows[i].date,project:parsedRows[i].project,note:note});
+  }
+  var dates=[];
+  pendingEntries.forEach(function(e){if(e.date&&dates.indexOf(e.date)<0) dates.push(e.date);});
+  existingByDate={};
+  var checked=0;
+  if(!dates.length){doActualSubmit(pendingEntries);return;}
+  dates.forEach(function(d){
+    apiCall('getEntriesByDate', null, function(existing){
+      if(existing.length>0) existingByDate[existing[0]._date||d]=existing;
+      checked++;
+      if(checked===dates.length) checkDuplicates(dates);
+    }, function(){ checked++; if(checked===dates.length) checkDuplicates(dates); });
+    // Note: getEntriesByDate needs date param via GET
+    fetch(APPS_SCRIPT_URL + '?action=getEntriesByDate&date=' + d)
+      .then(function(r){return r.json();})
+      .then(function(data){
+        var existing = data.data || data || [];
+        if(existing.length>0) existingByDate[d]=existing;
+        checked++;
+        if(checked===dates.length) checkDuplicates(dates);
+      })
+      .catch(function(){checked++;if(checked===dates.length) checkDuplicates(dates);});
+  });
+  // Reset checked since we're using fetch directly above
+  checked = -dates.length; // cancel the apiCall above
+}
+
+function checkDuplicates() {
+  var datesWithData=Object.keys(existingByDate);
+  if(!datesWithData.length){doActualSubmit(pendingEntries);return;}
+  var html="";
+  pendingEntries.forEach(function(e){
+    var existing=existingByDate[e.date]||[];
+    if(existing.some(function(ex){return ex.name===e.name&&ex.project===e.project;}))
+      html+="<div class='dup-row'><span class='badge-red'>⚠️ קיים</span><b>"+e.name+"</b> — "+e.project+" ("+formatDate(e.date)+")</div>";
+  });
+  if(!html){doActualSubmit(pendingEntries);return;}
+  var sHtml="";
+  datesWithData.forEach(function(d){
+    sHtml+="<div class='dup-box' style='margin-bottom:8px'><b>📅 "+formatDate(d)+" — כבר רשומים:</b><br>";
+    existingByDate[d].forEach(function(ex){sHtml+="• "+ex.name+" ("+ex.project+")<br>";});
+    sHtml+="</div>";
+  });
+  document.getElementById("dupContent").innerHTML=sHtml+"<p style='margin:8px 0 4px;font-weight:700;color:var(--red)'>רשומות קיימות ברשימה החדשה:</p>"+html;
+  document.getElementById("dupModal").classList.add("on");
+}
+
+function formatDate(iso){ if(!iso) return ""; var p=iso.split("-"); return p[2]+"/"+p[1]+"/"+p[0]; }
+function closeDupModal(){ document.getElementById("dupModal").classList.remove("on"); }
+function submitOnlyNew(){
+  closeDupModal();
+  var newOnly=pendingEntries.filter(function(e){
+    var ex=existingByDate[e.date]||[];
+    return !ex.some(function(x){return x.name===e.name&&x.project===e.project;});
+  });
+  if(!newOnly.length){showToast("אין רשומות חדשות","var(--orange)");return;}
+  doActualSubmit(newOnly);
+}
+function submitAllAnyway(){ closeDupModal(); doActualSubmit(pendingEntries); }
+
+function doActualSubmit(entries) {
+  var btn=document.getElementById("submitBtn");
+  btn.textContent="שומר..."; btn.disabled=true;
+  apiCall('addBulkEntries', {entries:entries}, function(){
+    showToast("נשמרו "+entries.length+" רשומות ✅");
+    document.getElementById("previewCard").style.display="none";
+    document.getElementById("rawText").value="";
+    parsedRows=[];
+    btn.textContent="✅ שלח הכל לשיטס"; btn.disabled=false;
+  }, function(e){
+    showToast(e.message||"שגיאה","var(--red)");
+    btn.textContent="✅ שלח הכל לשיטס"; btn.disabled=false;
+  });
+}
+
+function confirmWarnDates(){ document.getElementById("errorsBox").innerHTML=""; document.getElementById("submitBtn").disabled=false; showToast("ממשיך ✅"); }
+function cancelWarnDates(){ document.getElementById("previewCard").style.display="none"; parsedRows=[]; showToast("חזור ותתקן ✏️","var(--orange)"); }
+
+// ===== MODAL EMPLOYEE =====
+var _modalRateType = "יומי";
+function setModalRateType(type) {
+  _modalRateType = type;
+  var isH = type === "שעתי";
+  document.getElementById("modalBtnDaily").className  = "type-btn" + (isH ? "" : " on");
+  document.getElementById("modalBtnHourly").className = "type-btn" + (isH ? " on" : "");
+  document.getElementById("modalAmtLabel").textContent = isH ? "תעריף שעתי ₪" : "סכום יומי ₪";
+  document.getElementById("modalEmpAmt").placeholder = isH ? "לדוגמה: 45" : "לדוגמה: 500";
+}
+function openEmpModal(name) {
+  _modalRateType = "יומי";
+  document.getElementById("modalEmpName").value = name;
+  document.getElementById("modalEmpProj").value = "";
+  document.getElementById("modalEmpAmt").value = "";
+  setModalRateType("יומי");
+  var dl = document.getElementById("modalProjectsList");
+  dl.innerHTML = "";
+  var seen = {};
+  rates.forEach(function(r){ if(r.project&&!seen[r.project]){seen[r.project]=1;var opt=document.createElement("option");opt.value=r.project;dl.appendChild(opt);} });
+  apiCall('getProjectsList', null, function(projs){
+    projs.forEach(function(p){ if(!seen[p]){seen[p]=1;var opt=document.createElement("option");opt.value=p;dl.appendChild(opt);} });
+  });
+  document.getElementById("addEmpModal").classList.add("on");
+}
+function closeEmpModal(){ document.getElementById("addEmpModal").classList.remove("on"); }
+function saveNewEmployee() {
+  var name=document.getElementById("modalEmpName").value.trim();
+  var proj=document.getElementById("modalEmpProj").value.trim();
+  var amt=document.getElementById("modalEmpAmt").value;
+  if(!proj||!amt){showToast("מלא פרויקט וסכום","var(--orange)");return;}
+  var isH=(_modalRateType==="שעתי");
+  var newWorker={name:name,project:proj,amount:isH?0:parseFloat(amt),rateType:_modalRateType,hourlyRate:isH?parseFloat(amt):0};
+  apiCall('appendWorkerRate', {worker:newWorker}, function(){
+    apiCall('getWorkerRates', null, function(data){
+      rates=data||[];
+      showToast('"'+name+'" נוסף ✅');
+      closeEmpModal(); parseList(); loadManualSelects(); loadMifraotTab();
+    });
+  }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
+}
+function acceptSuggestion(wrong,correct){ var ta=document.getElementById("rawText"); ta.value=ta.value.replace(new RegExp(wrong,"g"),correct); parseList(); }
+
+// ===== מפרעות =====
+function loadMifraotTab(){
+  var sel1=document.getElementById("mifraName"),sel2=document.getElementById("mifraReportWorker");
+  sel1.innerHTML="<option value=''>בחר עובד...</option>"; sel2.innerHTML="<option value=''>כל העובדים</option>";
+  var seen={};
+  rates.forEach(function(r){ if(!seen[r.name]){seen[r.name]=1; sel1.innerHTML+="<option value='"+r.name+"'>"+r.name+"</option>"; sel2.innerHTML+="<option value='"+r.name+"'>"+r.name+"</option>";} });
+  document.getElementById("mifraDate").value=new Date().toISOString().split("T")[0];
+
+  // חודשים — משתי מקורות: נוכחות + מפרעות
+  var sel3=document.getElementById("mifraReportMonth");
+  sel3.innerHTML="<option value=''>בחר חודש...</option>";
+  apiCall('getMonthsList', null, function(months1){
+    apiCall('getMifraMonths', null, function(months2){
+      // מיזוג ומיון
+      var allMonths = {};
+      (months1||[]).forEach(function(m){ allMonths[m]=1; });
+      (months2||[]).forEach(function(m){ allMonths[m]=1; });
+      var sorted = Object.keys(allMonths).sort().reverse();
+      sorted.forEach(function(m){
+        var p=m.split("-");
+        sel3.innerHTML+="<option value='"+m+"'>"+heMonths[parseInt(p[1])]+" "+p[0]+"</option>";
+      });
+    }, function(){
+      // fallback — רק נוכחות
+      months1.forEach(function(m){
+        var p=m.split("-");
+        sel3.innerHTML+="<option value='"+m+"'>"+heMonths[parseInt(p[1])]+" "+p[0]+"</option>";
+      });
+    });
+  });
+  doLoadMifraList();
+}
+
+function doLoadMifraList(){
+  document.getElementById("mifraList").innerHTML="<div class='loading'>טוען...</div>";
+  apiCall('getAllMifraot', null, function(rows){
+    var el=document.getElementById("mifraList");
+    if(!rows||!rows.length){el.innerHTML="<div class='loading'>אין מפרעות עדיין</div>";return;}
+    var out="";
+    rows.forEach(function(r,i){
+      var ymd=r.date||"";
+      var df=ymd.length>=10?ymd.substr(8,2)+"/"+ymd.substr(5,2)+"/"+ymd.substr(0,4):ymd;
+      out+="<div class='mifra-row'>";
+      out+="<div><div class='mifra-name'>"+r.name+"</div><div class='mifra-meta'>"+df+(r.note?" · "+r.note:"")+(r.project?" | "+r.project:"")+"</div></div>";
+      out+="<div style='text-align:left'><div class='mifra-amount'>"+r.amount.toLocaleString()+" ₪</div><button onclick='doDeleteMifra("+i+")' style='background:none;border:none;color:var(--red);cursor:pointer;font-size:.78rem;padding:2px 0'>🗑️ מחק</button></div></div>";
+    });
+    el.innerHTML=out;
+  });
+}
+
+function doAddMifra(){
+  var name=document.getElementById("mifraName").value;
+  var amount=document.getElementById("mifraAmount").value;
+  var date=document.getElementById("mifraDate").value;
+  var note=document.getElementById("mifraNote").value.trim();
+  var project=document.getElementById("mifraProject").value.trim();
+  if(!name||!amount||!date){showToast("נא למלא שם, סכום ותאריך","var(--orange)");return;}
+  apiCall('addMifra', {data:{name:name,amount:amount,date:date,note:note||"מפרעה",project:project}}, function(){
+    showToast("מפרעה נוספה ✅");
+    document.getElementById("mifraAmount").value="";
+    document.getElementById("mifraNote").value="";
+    document.getElementById("mifraProject").value="";
+    doLoadMifraList();
+  }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
+}
+
+function doDeleteMifra(idx){
+  if(!confirm("למחוק מפרעה זו?")) return;
+  apiCall('deleteMifra', {idx:idx}, function(){
+    showToast("נמחק","var(--red)"); doLoadMifraList();
+  }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
+}
+
+function doMifraReport(){
+  var worker=document.getElementById("mifraReportWorker").value;
+  var month=document.getElementById("mifraReportMonth").value;
+  if(!month){showToast("נא לבחור חודש","var(--orange)");return;}
+  apiCall('generateMifraReport', {month:month,worker:worker}, function(name){
+    showToast("דוח נוצר: "+name+" ✅");
+  }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
+}
+
+// ===== דוחות =====
+var _salWorkersList=[];
+function loadSalaryData(){
+  apiCall('getMonthsList', null, function(months){
+    var sel=document.getElementById("salMonth");
+    sel.innerHTML="<option value=''>בחר חודש</option>";
+    months.forEach(function(m){var p=m.split("-");sel.innerHTML+="<option value='"+m+"'>"+heMonths[parseInt(p[1])]+" "+p[0]+"</option>";});
+    if(months.length){sel.value=months[0];renderWorkerCheckboxes();}
+  });
+  apiCall('getWorkersList', null, function(workers){ _salWorkersList=workers; renderWorkerCheckboxes(); });
+}
+function renderWorkerCheckboxes(){
+  var month=document.getElementById("salMonth").value;
+  var box=document.getElementById("workerCheckboxes");
+  if(!_salWorkersList.length){box.innerHTML="<div class='loading'>אין עובדים</div>";return;}
+  var html="";
+  _salWorkersList.forEach(function(w){
+    html+="<label class='worker-chk-label'><input type='checkbox' class='salChk' data-name='"+w+"' data-sheet='משכורת "+w+" "+month+"'><span>"+w+"</span></label>";
+  });
+  box.innerHTML=html;
+  checkExistingReports(month);
+}
+function checkExistingReports(month){
+  if(!month) return;
+  apiCall('getExistingSheetNames', null, function(existingSheets){
+    document.querySelectorAll(".salChk").forEach(function(chk){
+      var name=chk.dataset.name;
+      var label=chk.parentElement;
+      var old=label.querySelector(".sal-badge"); if(old) old.remove();
+      if(existingSheets.indexOf("משכורת "+name+" "+month)>=0){
+        var badge=document.createElement("span");
+        badge.className="sal-badge";
+        badge.textContent="✅ כבר הופק";
+        badge.style.cssText="font-size:.7rem;background:rgba(52,211,153,.15);color:var(--green);border-radius:5px;padding:2px 7px;margin-right:auto";
+        label.appendChild(badge);
+      }
+    });
+  });
+}
+function toggleAllSalWorkers(){
+  var checkboxes=document.querySelectorAll(".salChk");
+  var allChecked=Array.from(checkboxes).every(function(c){return c.checked;});
+  checkboxes.forEach(function(c){c.checked=!allChecked;});
+  document.getElementById("btnSelectAllSal").textContent=allChecked?"בחר הכל":"בטל הכל";
+}
+var _salPending=[],_salDone=[],_salExisting=[];
+function generateSalaryUI(){
+  var month=document.getElementById("salMonth").value;
+  if(!month){showToast("בחר חודש","var(--orange)");return;}
+  var checked=Array.from(document.querySelectorAll(".salChk:checked"));
+  if(!checked.length){showToast("סמן לפחות עובד אחד","var(--orange)");return;}
+  _salExisting=[];
+  checked.forEach(function(chk){if(chk.parentElement.querySelector(".sal-badge")) _salExisting.push(chk.dataset.name);});
+  if(_salExisting.length>0){if(!confirm("כבר קיים דוח עבור: "+_salExisting.join(", ")+"\nלהחליף?")) return;}
+  _salPending=checked.map(function(c){return c.dataset.name;}); _salDone=[];
+  var btn=document.getElementById("genSalBtn");
+  btn.disabled=true; btn.textContent="מכין (1/"+_salPending.length+")...";
+  document.getElementById("salResult").style.display="none";
+  runNextSalary(month,btn);
+}
+function runNextSalary(month,btn){
+  if(!_salPending.length){
+    btn.disabled=false; btn.textContent="💵 הכן דוחות";
+    var el=document.getElementById("salResult");
+    el.style.display="block";
+    el.innerHTML="✅ הופקו "+_salDone.length+" דוחות: <b>"+_salDone.join(", ")+"</b>";
+    showToast("כל הדוחות הופקו ✅");
+    checkExistingReports(month); return;
+  }
+  var worker=_salPending.shift();
+  btn.textContent="מכין "+worker+"... ("+(1+_salDone.length)+"/"+(_salPending.length+_salDone.length+1)+")";
+  apiCall('generateSalaryReport', {month:month,worker:worker}, function(){
+    _salDone.push(worker); runNextSalary(month,btn);
+  }, function(e){
+    showToast("שגיאה ב"+worker+": "+(e.message||""),"var(--red)");
+    runNextSalary(month,btn);
+  });
+}
+
+function loadReportData(){
+  apiCall('getMonthsList', null, function(months){
+    var sel=document.getElementById("selMonth");
+    sel.innerHTML="<option value=''>בחר חודש</option>";
+    months.forEach(function(m){var p=m.split("-");sel.innerHTML+="<option value='"+m+"'>"+heMonths[parseInt(p[1])]+" "+p[0]+"</option>";});
+  });
+  apiCall('getProjectsList', null, function(projs){
+    var sel=document.getElementById("selProject");
+    sel.innerHTML="<option value=''>בחר פרויקט</option>";
+    projs.forEach(function(p){sel.innerHTML+="<option value='"+p+"'>"+p+"</option>";});
+  });
+}
+function generateReportUI(){
+  var month=document.getElementById("selMonth").value,proj=document.getElementById("selProject").value;
+  var override=document.getElementById("overrideRate").value;
+  if(!month||!proj){showToast("בחר חודש ופרויקט","var(--orange)");return;}
+  var btn=document.getElementById("genReportBtn"); btn.textContent="מכין..."; btn.disabled=true;
+  apiCall('generateReport', {month:month,project:proj,overrideRate:override?parseFloat(override):0}, function(rName){
+    var el=document.getElementById("reportResult");
+    el.style.display="block"; el.innerHTML="✅ דוח נוצר: <b>"+rName+"</b>";
+    showToast("דוח נוצר ✅"); btn.textContent="📋 הכן דוח"; btn.disabled=false;
+  }, function(e){ showToast(e.message||"שגיאה","var(--red)"); btn.textContent="📋 הכן דוח"; btn.disabled=false; });
+}
+
+// ===== מחיקת עובד =====
+var _workersToDelete=[];
+function updateDeleteBtn(){
+  var checked=document.querySelectorAll(".workerChk:checked");
+  var btn=document.getElementById("btnDeleteSelected");
+  if(btn) btn.style.display=checked.length>0?"block":"none";
+  var all=document.querySelectorAll(".workerChk");
+  var chkAll=document.getElementById("chkAll");
+  if(chkAll) chkAll.checked=all.length>0&&checked.length===all.length;
+}
+function toggleAllWorkers(checked){
+  document.querySelectorAll(".workerChk").forEach(function(c){c.checked=checked;});
+  updateDeleteBtn();
+}
+function deleteSelectedWorkers(){
+  var checked=document.querySelectorAll(".workerChk:checked");
+  if(!checked.length) return;
+  _workersToDelete=[];
+  checked.forEach(function(c){_workersToDelete.push(c.dataset.name);});
+  var names=_workersToDelete.join(", ");
+  var html="<b style='color:var(--text1)'>"+(_workersToDelete.length===1?_workersToDelete[0]:_workersToDelete.length+" עובדים")+"</b><br><br>";
+  html+="העובד"+(_workersToDelete.length>1?"ים":"")+" יוסרו מהאפליקציה.<br><br>";
+  if(_workersToDelete.length>1) html+="<span style='font-size:.78rem;color:var(--text3)'>"+names+"</span><br><br>";
+  html+="<span style='font-size:.78rem;color:var(--text2)'>היסטוריית נוכחות ומפרעות <b>לא תימחק</b> מהשיטס.</span>";
+  document.getElementById("deleteWorkerSummary").innerHTML=html;
+  var btn=document.getElementById("confirmDeleteBtn");
+  btn.textContent="🗑️ הסר עובד"+(_workersToDelete.length>1?"ים":"");
+  btn.disabled=false;
+  document.getElementById("deleteWorkerModal").classList.add("on");
+}
+function confirmDeleteWorker(){
+  if(!_workersToDelete.length) return;
+  var btn=document.getElementById("confirmDeleteBtn");
+  btn.textContent="מוחק..."; btn.disabled=true;
+  rates=rates.filter(function(r){return _workersToDelete.indexOf(r.name)===-1;});
+  apiCall('saveWorkerRates', {rates:rates}, function(){
+    document.getElementById("deleteWorkerModal").classList.remove("on");
+    showToast(_workersToDelete.length===1?_workersToDelete[0]+" הוסר ✅":_workersToDelete.length+" עובדים הוסרו ✅","var(--red)");
+    _workersToDelete=[];
+    apiCall('getWorkerRates', null, function(data){
+      rates=data||[];
+      renderRates(); loadManualSelects(); loadMifraotTab();
+    });
+  }, function(e){ showToast(e.message||"שגיאה","var(--red)"); btn.textContent="🗑️ הסר עובד"; btn.disabled=false; });
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
