@@ -355,9 +355,8 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
         </div>
         <div>
           <label class="lbl">פרויקט</label>
-          <select id="manualProject" onchange="manualFillRate()" class="sel">
-            <option value="">בחר פרויקט...</option>
-          </select>
+          <input id="manualProject" list="manualProjectsList" placeholder="בחר או הקלד פרויקט..." autocomplete="off" onchange="manualFillRate()" oninput="manualFillRate()" class="inp">
+          <datalist id="manualProjectsList"></datalist>
         </div>
       </div>
 
@@ -772,7 +771,16 @@ function setManualEntryType(type) {
 
 function loadManualSelects() {
   document.getElementById("manualDate").value = new Date().toISOString().split("T")[0];
-  document.getElementById("manualProject").innerHTML = "<option value=''>בחר פרויקט...</option>";
+  // מלא datalist פרויקטים
+  var dl = document.getElementById("manualProjectsList");
+  if (dl) {
+    dl.innerHTML = "";
+    var seen = {};
+    rates.forEach(function(r){ if(r.project&&!seen[r.project]){seen[r.project]=1; dl.innerHTML+="<option value='"+r.project+"'>";} });
+    apiCall('getProjectsList', null, function(projs){
+      projs.forEach(function(p){ if(!seen[p]){seen[p]=1; dl.innerHTML+="<option value='"+p+"'>";} });
+    });
+  }
   apiCall('getWorkersList', null, function(workers){
     var sel = document.getElementById("manualName");
     sel.innerHTML = "<option value=''>בחר עובד...</option>";
@@ -789,20 +797,29 @@ function getWorkerRecord(name, proj) {
 
 function onManualNameChange() {
   var name = document.getElementById("manualName").value;
-  var sel2 = document.getElementById("manualProject");
-  sel2.innerHTML = "<option value=''>בחר פרויקט...</option>";
+  var inp = document.getElementById("manualProject");
+  var dl = document.getElementById("manualProjectsList");
+  inp.value = "";
+  dl.innerHTML = "";
   document.getElementById("manualHourlyRate").value = "";
   document.getElementById("manualCalcBox").style.display = "none";
   document.getElementById("manualDailyCalcBox").style.display = "none";
-  if (!name) return;
+  if (!name) {
+    // כשאין עובד נבחר — הצג את כל הפרויקטים
+    var allProjs = {};
+    rates.forEach(function(r){ if(r.project) allProjs[r.project]=1; });
+    Object.keys(allProjs).sort().forEach(function(p){ dl.innerHTML += "<option value='"+p+"'>"; });
+    return;
+  }
+  // כשנבחר עובד — הצג רק פרויקטים שלו
   var workerRecs = rates.filter(function(r){ return r.name === name; });
-  workerRecs.forEach(function(r){ sel2.innerHTML += "<option value='"+r.project+"'>"+r.project+"</option>"; });
-  if (workerRecs.length === 1) { sel2.value = workerRecs[0].project; manualFillRate(); }
+  workerRecs.forEach(function(r){ dl.innerHTML += "<option value='"+r.project+"'>"; });
+  if (workerRecs.length === 1) { inp.value = workerRecs[0].project; manualFillRate(); }
 }
 
 function manualFillRate() {
   var name = document.getElementById("manualName").value;
-  var proj = document.getElementById("manualProject").value;
+  var proj = document.getElementById("manualProject").value.trim();
   if (!name || !proj) return;
   var rec = getWorkerRecord(name, proj);
   if (!rec) return;
