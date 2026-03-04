@@ -697,6 +697,9 @@ function addRate() {
   var isH = (_rateType === "שעתי");
   var a = isH ? document.getElementById("nwHourly").value : document.getElementById("nwAmt").value;
   if (!n||!p||!a) { showToast("מלא שם, פרויקט וסכום","var(--orange)"); return; }
+  // בדוק כפילות של שם+פרויקט יחד (אותו עובד יכול להיות בפרויקטים שונים)
+  var dup = rates.some(function(r){ return r.name === n && r.project === p; });
+  if (dup) { showToast(n+" כבר קיים בפרויקט "+p,"var(--orange)"); return; }
   var newWorker = {name:n,project:p,amount:isH?0:parseFloat(a),rateType:_rateType,hourlyRate:isH?parseFloat(a):0};
   rates.push(newWorker);
   document.getElementById("nwName").value="";
