@@ -1233,8 +1233,9 @@ function saveNewEmployee() {
 function acceptSuggestion(wrong,correct){ var ta=document.getElementById("rawText"); ta.value=ta.value.replace(new RegExp(wrong,"g"),correct); parseList(); }
 function acceptProjectSuggestion(wrong,correct){
   var ta=document.getElementById("rawText");
-  var esc=wrong.replace(/[.*+?^${}()|[\]\]/g,"\$&");
-  ta.value=ta.value.replace(new RegExp(esc,"g"),correct);
+  while(ta.value.indexOf(wrong)>=0){
+    ta.value=ta.value.replace(wrong,correct);
+  }
   parseList();
 }
 
