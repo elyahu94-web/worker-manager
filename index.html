@@ -756,8 +756,11 @@ function loadRates() {
       (saved||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
       _projects.sort();
       _knownProjects = _projects.slice();
+      // רענן את כל הרשימות אחרי שהפרויקטים נטענו
+      loadManualSelects();
+      refreshProjectsList();
     });
-    renderRates(); loadManualSelects(); refreshProjectsList();
+    renderRates();
   });
 }
 loadRates();
@@ -808,6 +811,9 @@ function addProjectToList(nameOverride) {
   _projects.sort();
   _knownProjects = _projects.slice();
   renderProjectsTab();
+  // רענן select בהוספה ידנית
+  var sel=document.getElementById("manualProjSelect");
+  if(sel){ sel.innerHTML="<option value=''>בחר פרויקט...</option>"; _projects.forEach(function(p){ sel.innerHTML+="<option value='"+p+"'>"+p+"</option>"; }); }
   apiCall('saveProjectsList', {projects: _projects}, function(){
     showToast(name+" נוסף לפרויקטים ✅");
   }, function(){ showToast(name+" נוסף (לא נשמר לשיטס)","var(--orange)"); });
