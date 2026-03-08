@@ -759,31 +759,35 @@ loadRates();
 var _projects = [];
 
 function loadProjectsList(cb) {
-  apiCall('getProjectsList', null, function(projs){
-    var seen = {};
-    _projects = [];
-    (projs||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
-    _knownProjects.forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
-    _projects.sort();
-    if(cb) cb();
+  apiCall('getSavedProjects', null, function(saved){
+    apiCall('getProjectsList', null, function(fromSheets){
+      var seen = {};
+      _projects = [];
+      (saved||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
+      (fromSheets||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
+      _projects.sort();
+      _knownProjects = _projects.slice();
+      if(cb) cb();
+    });
   });
 }
 
 function renderProjectsTab() {
-  loadProjectsList(function(){
-    var el = document.getElementById("projectsListDisplay");
-    if(!el) return;
-    if(!_projects.length){
-      el.innerHTML = "<div class='loading'>אין פרויקטים עדיין</div>";
-      return;
-    }
-    var html = "";
-    _projects.forEach(function(p, i){
-      html += "<div class='rrow'><span style='flex:1;font-size:.9rem;font-weight:600'>"+p+"</span>";
-      html += "<button onclick='removeProject("+i+")' class='del'>✖</button></div>";
-    });
-    el.innerHTML = html;
+  // הצג מה שיש ב-_projects עכשיו — בלי לטעון מחדש
+  var el = document.getElementById("projectsListDisplay");
+  if(!el) return;
+  if(!_projects.length){
+    el.innerHTML = "<div class='loading'>טוען...</div>";
+    // טען מהשרת רק אם ריק
+    loadProjectsList(function(){ renderProjectsTab(); });
+    return;
+  }
+  var html = "";
+  _projects.forEach(function(p, i){
+    html += "<div class='rrow'><span style='flex:1;font-size:.9rem;font-weight:600'>"+p+"</span>";
+    html += "<button onclick='removeProject("+i+")' class='del'>✖</button></div>";
   });
+  el.innerHTML = html;
 }
 
 function addProjectToList() {
