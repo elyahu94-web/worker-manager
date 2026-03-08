@@ -620,6 +620,10 @@ function apiCall(action, payload, onSuccess, onError) {
 // ===== TABS =====
 function showTab(n) {
   if (n === 1) loadRates();
+document.addEventListener("DOMContentLoaded", function(){
+  var ta = document.getElementById("rawText");
+  if(ta) ta.addEventListener("input", function(){ _ignoredProjects=[]; });
+});
   if (n === 2) loadReportData();
   if (n === 3) loadSalaryData();
   if (n === 4) loadMifraotTab();
@@ -997,6 +1001,7 @@ function findClosestProject(proj) {
 }
 
 var _pendingFixes={};
+var _ignoredProjects=[];
 function applyProjectFix(key){
   var fix=_pendingFixes[key];
   if(!fix) return;
@@ -1005,20 +1010,15 @@ function applyProjectFix(key){
     ta.value=ta.value.replace(fix.wrong,fix.correct);
   }
   _pendingFixes={};
+  _ignoredProjects=[];
   parseList();
 }
 function ignoreProjectFix(key){
-  if(_pendingFixes[key]) _pendingFixes[key].ignored=true;
-  // הסר רק את השגיאה הזו והמשך
-  var errBox=document.getElementById("errorsBox");
-  var rows=errBox.querySelectorAll("[data-fix-key='"+key+"']");
-  rows.forEach(function(r){ r.parentElement.removeChild(r); });
-  // בדוק אם נשארו שגיאות אחרות
-  var remaining=errBox.querySelectorAll(".err-fix-row");
-  if(!remaining.length){
-    errBox.innerHTML="";
-    document.getElementById("submitBtn").disabled=false;
-  }
+  var fix=_pendingFixes[key];
+  if(fix) _ignoredProjects.push(fix.wrong);
+  document.getElementById("errorsBox").innerHTML="";
+  document.getElementById("submitBtn").disabled=false;
+  renderPreview();
 }
 
 function parseList() {
@@ -1046,7 +1046,7 @@ function parseList() {
       var pm=line.match(/[\(\uFF08]([^\)\uFF09]+)[\)\uFF09]/);
       if(pm){proj=pm[1].trim();line=line.replace(pm[0],"").trim();}
       if(!proj) errors.push("שורה \""+line.trim()+"\": חסר פרויקט (בסוגריים)");
-      if(proj){
+      if(proj && _ignoredProjects.indexOf(proj)<0){
         var cpMatch=findClosestProject(proj);
         if(cpMatch){
           var fixKey="pfix_"+Object.keys(_pendingFixes).length;
