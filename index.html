@@ -621,7 +621,7 @@ function showTab(n) {
   if (n === 1) loadRates();
   if (n === 2) loadReportData();
   if (n === 3) loadSalaryData();
-  if (n === 4) loadMifraotTab();
+  if (n === 4) { if(rates.length) loadMifraotTab(); else loadRates(true); }
   [0,1,2,3,4].forEach(function(i) {
     var c = document.getElementById("tabC"+i);
     var b = document.getElementById("tab"+i);
@@ -726,10 +726,11 @@ function saveRates() {
   }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
 }
 
-function loadRates() {
+function loadRates(andMifra) {
   apiCall('getWorkerRates', null, function(data){
     rates = data || [];
-    renderRates(); loadManualSelects(); loadMifraotTab(); refreshProjectsList();
+    renderRates(); loadManualSelects(); refreshProjectsList();
+    if(andMifra) loadMifraotTab();
   });
 }
 loadRates();
