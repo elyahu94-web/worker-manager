@@ -1001,24 +1001,26 @@ function findClosestProject(proj) {
 }
 
 var _pendingFixes={};
-var _ignoredProjects=[];
 function applyProjectFix(key){
   var fix=_pendingFixes[key];
   if(!fix) return;
+  // עדכן את הטקסט
   var ta=document.getElementById("rawText");
+  var oldVal=ta.value;
   while(ta.value.indexOf(fix.wrong)>=0){
     ta.value=ta.value.replace(fix.wrong,fix.correct);
   }
+  // עדכן את parsedRows ישירות — בלי לקרוא parseList מחדש
+  parsedRows.forEach(function(r){ if(r.project===fix.wrong) r.project=fix.correct; });
   _pendingFixes={};
-  _ignoredProjects=[];
-  parseList();
-}
-function ignoreProjectFix(key){
-  var fix=_pendingFixes[key];
-  if(fix) _ignoredProjects.push(fix.wrong);
   document.getElementById("errorsBox").innerHTML="";
   document.getElementById("submitBtn").disabled=false;
   renderPreview();
+}
+function ignoreProjectFix(key){
+  _pendingFixes={};
+  document.getElementById("errorsBox").innerHTML="";
+  document.getElementById("submitBtn").disabled=false;
 }
 
 function parseList() {
