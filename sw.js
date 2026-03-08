@@ -1,4 +1,4 @@
-var CACHE = 'worker-manager-v1';
+var CACHE = 'worker-manager-v2';
 var ASSETS = ['./', './index.html', './manifest.json', './logo-header.png'];
 
 self.addEventListener('install', function(e) {
@@ -23,9 +23,16 @@ self.addEventListener('activate', function(e) {
 
 self.addEventListener('fetch', function(e) {
   if (e.request.url.indexOf('script.google.com') > -1) return;
+  // Network first — תמיד נסה לקחת מהרשת, fallback ל-cache
   e.respondWith(
-    caches.match(e.request).then(function(cached) {
-      return cached || fetch(e.request).catch(function(){ return cached; });
+    fetch(e.request).then(function(response) {
+      // עדכן את ה-cache עם הגרסה החדשה
+      var clone = response.clone();
+      caches.open(CACHE).then(function(c){ c.put(e.request, clone); });
+      return response;
+    }).catch(function() {
+      // אם אין רשת — השתמש ב-cache
+      return caches.match(e.request);
     })
   );
 });
