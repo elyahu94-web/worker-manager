@@ -1064,15 +1064,26 @@ function applyProjectFix(key){
     ta.value=ta.value.split(fix.wrong).join(fix.correct);
   }
   parsedRows.forEach(function(r){ if(r.project===fix.wrong) r.project=fix.correct; });
-  _pendingFixes={};
-  document.getElementById("errorsBox").innerHTML="";
-  document.getElementById("submitBtn").disabled=false;
+  // סמן כטופל — לא מנקה את כולם
+  delete _pendingFixes[key];
+  // עדכן את תצוגת האזהרות
+  var el=document.getElementById("warn_"+key);
+  if(el) el.style.display="none";
+  // אם אין יותר אזהרות — נקה ואפשר שליחה
+  if(!Object.keys(_pendingFixes).length){
+    document.getElementById("errorsBox").innerHTML="";
+    document.getElementById("submitBtn").disabled=false;
+  }
   renderPreview();
 }
 function ignoreProjectFix(key){
-  _pendingFixes={};
-  document.getElementById("errorsBox").innerHTML="";
-  document.getElementById("submitBtn").disabled=false;
+  delete _pendingFixes[key];
+  var el=document.getElementById("warn_"+key);
+  if(el) el.style.display="none";
+  if(!Object.keys(_pendingFixes).length){
+    document.getElementById("errorsBox").innerHTML="";
+    document.getElementById("submitBtn").disabled=false;
+  }
 }
 
 function parseList() {
@@ -1105,7 +1116,7 @@ function parseList() {
         if(cpMatch){
           var fixKey="pfix_"+Object.keys(_pendingFixes).length;
           _pendingFixes[fixKey]={wrong:proj,correct:cpMatch};
-          projWarnings.push("<span class='err-fix-row' data-fix-key='"+fixKey+"'>פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+cpMatch+"\"?&nbsp;"
+          projWarnings.push("<span id='warn_"+fixKey+"' class='err-fix-row' data-fix-key='"+fixKey+"'>פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+cpMatch+"\"?&nbsp;"
             +"<button class='btn-add-inline' style='background:rgba(52,211,153,.2);color:var(--green);border-color:var(--green)' onclick='applyProjectFix(\""+fixKey+"\")'>✅ כן, תקן</button>&nbsp;"
             +"<button class='btn-add-inline' style='background:rgba(251,191,36,.15);color:var(--yellow);border-color:var(--yellow)' onclick='ignoreProjectFix(\""+fixKey+"\")'>➡️ המשך בכל זאת</button>"
             +"</span>");
