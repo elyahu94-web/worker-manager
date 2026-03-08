@@ -641,9 +641,18 @@ function showToast(m, c) {
 
 // ===== RATES =====
 function getRate(name, proj) {
+  // חיפוש מדויק שם+פרויקט
   for (var i = 0; i < rates.length; i++) {
     var r = rates[i];
     if (r.name === name.trim() && r.project === proj.trim()) {
+      if (r.rateType === "שעתי" && r.hourlyRate) return Math.round(r.hourlyRate * 8);
+      return r.amount || "";
+    }
+  }
+  // fallback — קח סכום מהפרויקט הרגיל של העובד
+  for (var i = 0; i < rates.length; i++) {
+    var r = rates[i];
+    if (r.name === name.trim()) {
       if (r.rateType === "שעתי" && r.hourlyRate) return Math.round(r.hourlyRate * 8);
       return r.amount || "";
     }
@@ -831,6 +840,7 @@ function manualFillRate() {
   var proj = document.getElementById("manualProject").value.trim();
   if (!name || !proj) return;
   var rec = getWorkerRecord(name, proj);
+  if (!rec) rec = rates.filter(function(r){ return r.name === name; })[0] || null;
   if (!rec) return;
 
   if (_manualEntryType === "שעתי") {
