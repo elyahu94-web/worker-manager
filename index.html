@@ -736,9 +736,19 @@ function saveRates() {
 function loadRates() {
   apiCall('getWorkerRates', null, function(data){
     rates = data || [];
-    // טען גם רשימת פרויקטים ידועים מהשיטס
-    apiCall('getProjectsList', null, function(projs){
-      _knownProjects = projs || [];
+    // טען פרויקטים שמורים + מנוכחות
+    apiCall('getSavedProjects', null, function(saved){
+      apiCall('getProjectsList', null, function(fromSheets){
+        var seen = {};
+        _projects = [];
+        // קודם הפרויקטים השמורים
+        (saved||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
+        // אחר כך מנוכחות (לא לדרוס)
+        (fromSheets||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
+        rates.forEach(function(r){ if(r.project&&!seen[r.project]){seen[r.project]=1;_projects.push(r.project);} });
+        _projects.sort();
+        _knownProjects = _projects.slice();
+      });
     });
     renderRates(); loadManualSelects(); refreshProjectsList();
   });
@@ -786,7 +796,9 @@ function addProjectToList() {
   _knownProjects = _projects.slice();
   inp.value = "";
   renderProjectsTab();
-  showToast(name+" נוסף ✅");
+  apiCall('saveProjectsList', {projects: _projects}, function(){
+    showToast(name+" נוסף ✅");
+  }, function(){ showToast(name+" נוסף (לא נשמר לשיטס)","var(--orange)"); });
 }
 
 function removeProject(i) {
@@ -794,6 +806,9 @@ function removeProject(i) {
   _projects.splice(i,1);
   _knownProjects = _projects.slice();
   renderProjectsTab();
+  apiCall('saveProjectsList', {projects: _projects}, function(){
+    showToast("פרויקט הוסר ✅","var(--red)");
+  });
 }
 
 function autoAddProject(projName) {
