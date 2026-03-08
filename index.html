@@ -966,24 +966,28 @@ function findClosestProject(proj) {
   rates.forEach(function(r){ if(r.project) known[r.project]=1; });
   var knownProjs=Object.keys(known);
   if(!knownProjs.length) return null;
-  if(knownProjs.indexOf(proj.trim())>=0) return null; // מדויק
+  if(knownProjs.indexOf(proj.trim())>=0) return null; // התאמה מדויקת — אין צורך
   var projL=proj.trim().toLowerCase();
-  // contains
-  var found=null;
+  var best=null, bestScore=0;
   knownProjs.forEach(function(p){
-    if(p.toLowerCase().indexOf(projL)>=0 || projL.indexOf(p.toLowerCase())>=0){
-      if(!found || p.length<found.length) found=p;
+    var pL=p.toLowerCase();
+    var score=0;
+    // 1. האחד מכיל את השני
+    if(pL.indexOf(projL)>=0 || projL.indexOf(pL)>=0){
+      score=0.85;
+    } else {
+      // 2. levenshtein רגיל
+      var dist=levenshtein(projL,pL);
+      score=(Math.max(projL.length,pL.length)-dist)/Math.max(projL.length,pL.length);
+      // 3. בונוס על מילים משותפות
+      var wordsA=projL.split(/\s+/), wordsB=pL.split(/\s+/);
+      var shared=wordsA.filter(function(w){ return wordsB.indexOf(w)>=0; }).length;
+      if(shared>0) score=Math.max(score, shared/Math.max(wordsA.length,wordsB.length)*0.9);
     }
+    if(score>bestScore){ bestScore=score; best=p; }
   });
-  if(found) return found;
-  // levenshtein
-  var best=null,bestScore=0;
-  knownProjs.forEach(function(p){
-    var dist=levenshtein(projL,p.toLowerCase());
-    var score=(Math.max(projL.length,p.length)-dist)/Math.max(projL.length,p.length);
-    if(score>bestScore){bestScore=score;best=p;}
-  });
-  return bestScore>=0.55?best:null;
+  // הצע אם יש דמיון כלשהו (סף נמוך מאוד — 0.35)
+  return bestScore>=0.35?best:null;
 }
 
 var _pendingFixes={};
