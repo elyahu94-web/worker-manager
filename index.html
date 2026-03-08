@@ -641,9 +641,18 @@ function showToast(m, c) {
 
 // ===== RATES =====
 function getRate(name, proj) {
+  // חיפוש מדויק שם + פרויקט
   for (var i = 0; i < rates.length; i++) {
     var r = rates[i];
     if (r.name === name.trim() && r.project === proj.trim()) {
+      if (r.rateType === "שעתי" && r.hourlyRate) return Math.round(r.hourlyRate * 8);
+      return r.amount || "";
+    }
+  }
+  // fallback — עובד בפרויקט שונה: קח את הסכום הרגיל שלו
+  for (var i = 0; i < rates.length; i++) {
+    var r = rates[i];
+    if (r.name === name.trim()) {
       if (r.rateType === "שעתי" && r.hourlyRate) return Math.round(r.hourlyRate * 8);
       return r.amount || "";
     }
@@ -952,7 +961,58 @@ function findClosest(name) {
   return bestScore>=0.6?best:null;
 }
 
+function findClosestProject(proj) {
+  var known={};
+  rates.forEach(function(r){ if(r.project) known[r.project]=1; });
+  var knownProjs=Object.keys(known);
+  if(!knownProjs.length) return null;
+  if(knownProjs.indexOf(proj.trim())>=0) return null; // מדויק
+  var projL=proj.trim().toLowerCase();
+  // contains
+  var found=null;
+  knownProjs.forEach(function(p){
+    if(p.toLowerCase().indexOf(projL)>=0 || projL.indexOf(p.toLowerCase())>=0){
+      if(!found || p.length<found.length) found=p;
+    }
+  });
+  if(found) return found;
+  // levenshtein
+  var best=null,bestScore=0;
+  knownProjs.forEach(function(p){
+    var dist=levenshtein(projL,p.toLowerCase());
+    var score=(Math.max(projL.length,p.length)-dist)/Math.max(projL.length,p.length);
+    if(score>bestScore){bestScore=score;best=p;}
+  });
+  return bestScore>=0.55?best:null;
+}
+
+var _pendingFixes={};
+function applyProjectFix(key){
+  var fix=_pendingFixes[key];
+  if(!fix) return;
+  var ta=document.getElementById("rawText");
+  while(ta.value.indexOf(fix.wrong)>=0){
+    ta.value=ta.value.replace(fix.wrong,fix.correct);
+  }
+  _pendingFixes={};
+  parseList();
+}
+function ignoreProjectFix(key){
+  if(_pendingFixes[key]) _pendingFixes[key].ignored=true;
+  // הסר רק את השגיאה הזו והמשך
+  var errBox=document.getElementById("errorsBox");
+  var rows=errBox.querySelectorAll("[data-fix-key='"+key+"']");
+  rows.forEach(function(r){ r.parentElement.removeChild(r); });
+  // בדוק אם נשארו שגיאות אחרות
+  var remaining=errBox.querySelectorAll(".err-fix-row");
+  if(!remaining.length){
+    errBox.innerHTML="";
+    document.getElementById("submitBtn").disabled=false;
+  }
+}
+
 function parseList() {
+  _pendingFixes={};
   var raw=document.getElementById("rawText").value.trim();
   if(!raw){showToast("הדבק טקסט קודם","var(--orange)");return;}
   var lines=raw.split("\n");
@@ -976,6 +1036,17 @@ function parseList() {
       var pm=line.match(/[\(\uFF08]([^\)\uFF09]+)[\)\uFF09]/);
       if(pm){proj=pm[1].trim();line=line.replace(pm[0],"").trim();}
       if(!proj) errors.push("שורה \""+line.trim()+"\": חסר פרויקט (בסוגריים)");
+      if(proj){
+        var cpMatch=findClosestProject(proj);
+        if(cpMatch){
+          var fixKey="pfix_"+Object.keys(_pendingFixes).length;
+          _pendingFixes[fixKey]={wrong:proj,correct:cpMatch};
+          errors.push("<span class='err-fix-row' data-fix-key='"+fixKey+"'>פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+cpMatch+"\"?&nbsp;"
+            +"<button class='btn-add-inline' style='background:rgba(52,211,153,.2);color:var(--green);border-color:var(--green)' onclick='applyProjectFix(\""+fixKey+"\")'>✅ כן, תקן</button>&nbsp;"
+            +"<button class='btn-add-inline' onclick='ignoreProjectFix(\""+fixKey+"\")'>➡️ המשך בכל זאת</button>"
+            +"</span>");
+        }
+      }
       var hasSep=line.indexOf(",")>=0||line.indexOf("\u060C")>=0||line.indexOf("\u061B")>=0;
       if(!hasSep&&line.split(" ").filter(Boolean).length>=2){errors.push("שורה \""+line+"\": חסר פסיק בין שמות");return;}
       var names=line.split(/[,\u060C\u061B]/).map(function(n){return n.trim();}).filter(Boolean);
@@ -1197,7 +1268,11 @@ function saveNewEmployee() {
     });
   }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
 }
-function acceptSuggestion(wrong,correct){ var ta=document.getElementById("rawText"); ta.value=ta.value.replace(new RegExp(wrong,"g"),correct); parseList(); }
+function acceptSuggestion(wrong,correct){
+  var ta=document.getElementById("rawText");
+  ta.value=ta.value.replace(new RegExp(wrong,"g"),correct);
+  parseList();
+}
 
 // ===== מפרעות =====
 function loadMifraotTab(){
