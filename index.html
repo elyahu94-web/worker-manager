@@ -736,19 +736,13 @@ function saveRates() {
 function loadRates() {
   apiCall('getWorkerRates', null, function(data){
     rates = data || [];
-    // טען פרויקטים שמורים + מנוכחות
+    // טען רק מגיליון "פרויקטים" השמור
     apiCall('getSavedProjects', null, function(saved){
-      apiCall('getProjectsList', null, function(fromSheets){
-        var seen = {};
-        _projects = [];
-        // קודם הפרויקטים השמורים
-        (saved||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
-        // אחר כך מנוכחות (לא לדרוס)
-        (fromSheets||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
-        rates.forEach(function(r){ if(r.project&&!seen[r.project]){seen[r.project]=1;_projects.push(r.project);} });
-        _projects.sort();
-        _knownProjects = _projects.slice();
-      });
+      var seen = {};
+      _projects = [];
+      (saved||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
+      _projects.sort();
+      _knownProjects = _projects.slice();
     });
     renderRates(); loadManualSelects(); refreshProjectsList();
   });
@@ -759,16 +753,14 @@ loadRates();
 var _projects = [];
 
 function loadProjectsList(cb) {
+  // טען רק מגיליון "פרויקטים" השמור — לא מנוכחות
   apiCall('getSavedProjects', null, function(saved){
-    apiCall('getProjectsList', null, function(fromSheets){
-      var seen = {};
-      _projects = [];
-      (saved||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
-      (fromSheets||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
-      _projects.sort();
-      _knownProjects = _projects.slice();
-      if(cb) cb();
-    });
+    var seen = {};
+    _projects = [];
+    (saved||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
+    _projects.sort();
+    _knownProjects = _projects.slice();
+    if(cb) cb();
   });
 }
 
