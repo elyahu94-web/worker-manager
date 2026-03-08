@@ -1035,10 +1035,8 @@ function findClosest(name) {
 }
 
 function findClosestProject(proj) {
-  var known={};
-  rates.forEach(function(r){ if(r.project) known[r.project]=1; });
-  _knownProjects.forEach(function(p){ if(p) known[p]=1; });
-  var knownProjs=Object.keys(known);
+  // רק מגיליון הפרויקטים הרשמי
+  var knownProjs = _projects.slice();
   if(!knownProjs.length) return null;
   var projL=proj.trim().toLowerCase();
   if(knownProjs.some(function(p){ return p.toLowerCase()===projL; })) return null;
@@ -1124,7 +1122,6 @@ function parseList() {
           else errors.push("שם \""+nm+"\": לא קיים <button class='btn-add-inline' onclick='openEmpModal(\""+nm+"\")'>➕ הוסף</button>");
         }
         parsedRows.push({name:nm,project:proj,date:block.date,amount:getRate(nm,proj),auto:getRate(nm,proj)!==""});
-        if(proj) autoAddProject(proj);
       });
     });
   });
