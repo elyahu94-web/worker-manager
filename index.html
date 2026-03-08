@@ -697,28 +697,52 @@ function renderRates() {
     el.innerHTML = "<div class='loading'>אין סכומים קבועים עדיין</div>";
     return;
   }
+  // קבץ פרויקטים לפי שם עובד
+  var byName = {};
+  var nameOrder = [];
+  rates.forEach(function(r, i) {
+    if (!byName[r.name]) { byName[r.name] = []; nameOrder.push(r.name); }
+    byName[r.name].push({r:r, i:i});
+  });
+
   var html = "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px'>";
   html += "<label style='font-size:.8rem;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px'><input type='checkbox' id='chkAll' onchange='toggleAllWorkers(this.checked)' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent)'> בחר הכל</label>";
   html += "<button id='btnDeleteSelected' onclick='deleteSelectedWorkers()' style='display:none;background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3);border-radius:7px;padding:6px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial'>🗑️ הסר נבחרים</button>";
   html += "</div>";
-  rates.forEach(function(r, i) {
-    var isH = (r.rateType === "שעתי");
-    var badge = isH
-      ? "<span class='badge-yellow'>🕐 שעתי</span>"
-      : "<span class='badge-green'>📅 יומי</span>";
-    html += "<div class='rrow'>";
-    html += "<input type='checkbox' class='workerChk' data-name='"+r.name+"' onchange='updateDeleteBtn()' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0'>";
-    html += "<input value='"+r.name+"' onchange='rates["+i+"].name=this.value' placeholder='שם' style='flex:2;min-width:80px'>";
-    html += "<input value='"+r.project+"' onchange='rates["+i+"].project=this.value' placeholder='פרויקט' style='flex:2;min-width:80px'>";
-    if (isH) {
-      html += "<input type='number' value='"+(r.hourlyRate||0)+"' onchange='rates["+i+"].hourlyRate=this.value' placeholder='₪/שעה' style='flex:1;min-width:65px'>";
-    } else {
-      html += "<input type='number' value='"+(r.amount||0)+"' onchange='rates["+i+"].amount=this.value' placeholder='₪/יום' style='flex:1;min-width:65px'>";
-    }
-    html += badge;
-    html += "<button onclick='addProjectToWorker(\""+r.name+"\")' title='הוסף פרויקט נוסף' style='background:rgba(79,142,247,.15);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:.8rem;cursor:pointer;white-space:nowrap;margin-right:4px'>＋ פרויקט</button>";
+
+  nameOrder.forEach(function(name) {
+    var entries = byName[name];
+    var firstIdx = entries[0].i;
+
+    html += "<div style='background:var(--bg2);border-radius:12px;margin-bottom:10px;overflow:hidden;border:1px solid var(--border)'>";
+
+    // שורת כותרת — שם עובד + checkbox + כפתור + פרויקט
+    html += "<div class='rrow' style='background:var(--bg3);border-radius:0;padding:10px 12px'>";
+    html += "<input type='checkbox' class='workerChk' data-name='"+name+"' onchange='updateDeleteBtn()' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0'>";
+    html += "<span style='flex:2;font-weight:700;font-size:.95rem'>"+name+"</span>";
+    html += "<button onclick='addProjectToWorker(""+name+"")' style='background:rgba(79,142,247,.15);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:3px 10px;font-size:.8rem;cursor:pointer;white-space:nowrap'>＋ פרויקט</button>";
+    html += "</div>";
+
+    // שורה לכל פרויקט
+    entries.forEach(function(entry) {
+      var r = entry.r, i = entry.i;
+      var isH = (r.rateType === "שעתי");
+      var badge = isH ? "<span class='badge-yellow'>🕐 שעתי</span>" : "<span class='badge-green'>📅 יומי</span>";
+      html += "<div class='rrow' style='padding:8px 12px 8px 24px;border-top:1px solid var(--border)'>";
+      html += "<span style='color:var(--text2);font-size:.8rem;width:14px'>↳</span>";
+      html += "<input value='"+r.project+"' onchange='rates["+i+"].project=this.value' placeholder='פרויקט' list='projectsList' style='flex:2;min-width:80px'>";
+      if (isH) {
+        html += "<input type='number' value='"+(r.hourlyRate||0)+"' onchange='rates["+i+"].hourlyRate=this.value' placeholder='₪/שעה' style='flex:1;min-width:65px'>";
+      } else {
+        html += "<input type='number' value='"+(r.amount||0)+"' onchange='rates["+i+"].amount=this.value' placeholder='₪/יום' style='flex:1;min-width:65px'>";
+      }
+      html += badge;
+      html += "</div>";
+    });
+
     html += "</div>";
   });
+
   el.innerHTML = html;
 }
 
@@ -1565,18 +1589,31 @@ function deleteProject(i) {
 }
 
 function findClosestProject(proj) {
-  var known={};
-  _projects.forEach(function(p){ known[p]=1; });
-  rates.forEach(function(r){ if(r.project) known[r.project]=1; });
-  var knownProjs = Object.keys(known);
-  if(knownProjs.indexOf(proj)>=0) return null; // מדויק — בסדר
+  // רק מה שהוגדר ב"פרויקטים" — לא מה שזוכר מהעובדים
+  var knownProjs = _projects.slice();
+  if(!knownProjs.length) return null;
+  var projLower = proj.trim().toLowerCase();
+
+  // 1. התאמה מדויקת
+  if(knownProjs.indexOf(proj.trim())>=0) return null;
+
+  // 2. האם מה שנכתב מופיע בתוך שם פרויקט ידוע (contains)
+  var contained = null;
+  knownProjs.forEach(function(p){
+    if(p.toLowerCase().indexOf(projLower)>=0 || projLower.indexOf(p.toLowerCase())>=0){
+      if(!contained || p.length < contained.length) contained = p;
+    }
+  });
+  if(contained) return contained;
+
+  // 3. דמיון לוונשטיין — סף נמוך יותר (50%)
   var best=null, bestScore=0;
   knownProjs.forEach(function(p){
-    var dist=levenshtein(proj,p);
-    var score=(Math.max(proj.length,p.length)-dist)/Math.max(proj.length,p.length);
+    var dist=levenshtein(projLower, p.toLowerCase());
+    var score=(Math.max(projLower.length,p.length)-dist)/Math.max(projLower.length,p.length);
     if(score>bestScore){ bestScore=score; best=p; }
   });
-  return bestScore>=0.6 ? best : null;
+  return bestScore>=0.5 ? best : null;
 }
 
 function addProjectToWorker(workerName) {
