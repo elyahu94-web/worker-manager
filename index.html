@@ -302,7 +302,6 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
   <div class="tabs">
     <button class="tab on" id="tab0" onclick="showTab(0)">📥 ייבוא</button>
     <button class="tab" id="tab1" onclick="showTab(1)">👷 עובדים</button>
-    <button class="tab" id="tab5" onclick="showTab(5)">🏗️ פרויקטים</button>
     <button class="tab" id="tab4" onclick="showTab(4)">💸 מפרעות</button>
     <button class="tab" id="tab2" onclick="showTab(2)">📄 דוח מזמין</button>
     <button class="tab" id="tab3" onclick="showTab(3)">💵 משכורות</button>
@@ -436,22 +435,6 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
     </div>
   </div>
 
-  <!-- TAB 5 — פרויקטים -->
-  <div id="tabC5" style="display:none">
-    <div class="crd">
-      <h2>➕ הוסף פרויקט</h2>
-      <div style="display:flex;gap:8px;margin-bottom:8px">
-        <input id="nwProjName" placeholder="שם פרויקט רשמי..." class="inp" style="flex:1">
-        <button onclick="addProject()" style="padding:9px 18px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:1rem">➕ הוסף</button>
-      </div>
-      <p class="hint">💡 הגדר שמות פרויקטים רשמיים — בייבוא רשימה שמות דומות יזוהו אוטומטית ויוצע לך לתקן</p>
-    </div>
-    <div class="crd">
-      <h2>📋 רשימת פרויקטים</h2>
-      <div id="projectsListDisplay" class="loading">טוען...</div>
-    </div>
-  </div>
-
   <!-- TAB 4 — מפרעות -->
   <div id="tabC4" style="display:none">
     <div class="crd" style="margin-bottom:14px">
@@ -497,10 +480,6 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
       <button onclick="doMifraReport()" class="btn bg">📄 הוצא דוח מפרעות</button>
     </div>
 
-    <div class="crd">
-      <h2>📊 סיכום מפרעות</h2>
-      <div id="mifraSummary"></div>
-    </div>
     <div class="crd">
       <h2>📋 היסטוריית מפרעות</h2>
       <div id="mifraList" class="loading">טוען...</div>
@@ -637,9 +616,8 @@ function showTab(n) {
   if (n === 1) loadRates();
   if (n === 2) loadReportData();
   if (n === 3) loadSalaryData();
-  if (n === 4) { if(rates.length) loadMifraotTab(); else loadRates(true); }
-  if (n === 5) loadProjectsTab();
-  [0,1,2,3,4,5].forEach(function(i) {
+  if (n === 4) loadMifraotTab();
+  [0,1,2,3,4].forEach(function(i) {
     var c = document.getElementById("tabC"+i);
     var b = document.getElementById("tab"+i);
     if(c) c.style.display = i===n ? "block" : "none";
@@ -658,18 +636,9 @@ function showToast(m, c) {
 
 // ===== RATES =====
 function getRate(name, proj) {
-  // חיפוש מדויק שם+פרויקט
   for (var i = 0; i < rates.length; i++) {
     var r = rates[i];
     if (r.name === name.trim() && r.project === proj.trim()) {
-      if (r.rateType === "שעתי" && r.hourlyRate) return Math.round(r.hourlyRate * 8);
-      return r.amount || "";
-    }
-  }
-  // fallback — שם עובד בלבד (פרויקט שונה)
-  for (var i = 0; i < rates.length; i++) {
-    var r = rates[i];
-    if (r.name === name.trim()) {
       if (r.rateType === "שעתי" && r.hourlyRate) return Math.round(r.hourlyRate * 8);
       return r.amount || "";
     }
@@ -697,52 +666,27 @@ function renderRates() {
     el.innerHTML = "<div class='loading'>אין סכומים קבועים עדיין</div>";
     return;
   }
-  // קבץ פרויקטים לפי שם עובד
-  var byName = {};
-  var nameOrder = [];
-  rates.forEach(function(r, i) {
-    if (!byName[r.name]) { byName[r.name] = []; nameOrder.push(r.name); }
-    byName[r.name].push({r:r, i:i});
-  });
-
   var html = "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px'>";
   html += "<label style='font-size:.8rem;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px'><input type='checkbox' id='chkAll' onchange='toggleAllWorkers(this.checked)' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent)'> בחר הכל</label>";
   html += "<button id='btnDeleteSelected' onclick='deleteSelectedWorkers()' style='display:none;background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3);border-radius:7px;padding:6px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial'>🗑️ הסר נבחרים</button>";
   html += "</div>";
-
-  nameOrder.forEach(function(name) {
-    var entries = byName[name];
-    var firstIdx = entries[0].i;
-
-    html += "<div style='background:var(--bg2);border-radius:12px;margin-bottom:10px;overflow:hidden;border:1px solid var(--border)'>";
-
-    // שורת כותרת — שם עובד + checkbox + כפתור + פרויקט
-    html += "<div class='rrow' style='background:var(--bg3);border-radius:0;padding:10px 12px'>";
-    html += "<input type='checkbox' class='workerChk' data-name='"+name+"' onchange='updateDeleteBtn()' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0'>";
-    html += "<span style='flex:2;font-weight:700;font-size:.95rem'>"+name+"</span>";
-    html += "<button onclick='addProjectToWorker(""+name+"")' style='background:rgba(79,142,247,.15);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:3px 10px;font-size:.8rem;cursor:pointer;white-space:nowrap'>＋ פרויקט</button>";
-    html += "</div>";
-
-    // שורה לכל פרויקט
-    entries.forEach(function(entry) {
-      var r = entry.r, i = entry.i;
-      var isH = (r.rateType === "שעתי");
-      var badge = isH ? "<span class='badge-yellow'>🕐 שעתי</span>" : "<span class='badge-green'>📅 יומי</span>";
-      html += "<div class='rrow' style='padding:8px 12px 8px 24px;border-top:1px solid var(--border)'>";
-      html += "<span style='color:var(--text2);font-size:.8rem;width:14px'>↳</span>";
-      html += "<input value='"+r.project+"' onchange='rates["+i+"].project=this.value' placeholder='פרויקט' list='projectsList' style='flex:2;min-width:80px'>";
-      if (isH) {
-        html += "<input type='number' value='"+(r.hourlyRate||0)+"' onchange='rates["+i+"].hourlyRate=this.value' placeholder='₪/שעה' style='flex:1;min-width:65px'>";
-      } else {
-        html += "<input type='number' value='"+(r.amount||0)+"' onchange='rates["+i+"].amount=this.value' placeholder='₪/יום' style='flex:1;min-width:65px'>";
-      }
-      html += badge;
-      html += "</div>";
-    });
-
+  rates.forEach(function(r, i) {
+    var isH = (r.rateType === "שעתי");
+    var badge = isH
+      ? "<span class='badge-yellow'>🕐 שעתי</span>"
+      : "<span class='badge-green'>📅 יומי</span>";
+    html += "<div class='rrow'>";
+    html += "<input type='checkbox' class='workerChk' data-name='"+r.name+"' onchange='updateDeleteBtn()' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0'>";
+    html += "<input value='"+r.name+"' onchange='rates["+i+"].name=this.value' placeholder='שם' style='flex:2;min-width:80px'>";
+    html += "<input value='"+r.project+"' onchange='rates["+i+"].project=this.value' placeholder='פרויקט' style='flex:2;min-width:80px'>";
+    if (isH) {
+      html += "<input type='number' value='"+(r.hourlyRate||0)+"' onchange='rates["+i+"].hourlyRate=this.value' placeholder='₪/שעה' style='flex:1;min-width:65px'>";
+    } else {
+      html += "<input type='number' value='"+(r.amount||0)+"' onchange='rates["+i+"].amount=this.value' placeholder='₪/יום' style='flex:1;min-width:65px'>";
+    }
+    html += badge;
     html += "</div>";
   });
-
   el.innerHTML = html;
 }
 
@@ -777,18 +721,10 @@ function saveRates() {
   }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
 }
 
-function loadRates(andMifra) {
+function loadRates() {
   apiCall('getWorkerRates', null, function(data){
     rates = data || [];
-    // טען פרויקטים שמורים ואז רנדר הכל
-    apiCall('getProjectsListSaved', null, function(projs){
-      _projects = (projs||[]).filter(Boolean).sort();
-      renderRates(); loadManualSelects(); refreshProjectsList();
-      if(andMifra) loadMifraotTab();
-    }, function(){
-      renderRates(); loadManualSelects(); refreshProjectsList();
-      if(andMifra) loadMifraotTab();
-    });
+    renderRates(); loadManualSelects(); refreshProjectsList();
   });
 }
 loadRates();
@@ -800,15 +736,20 @@ function refreshProjectsList() {
   var seen = {};
   dl.innerHTML = "";
   if(dl2) dl2.innerHTML = "";
-  var addOpt = function(p){
-    if(p && !seen[p]){
-      seen[p]=1;
-      [dl,dl2].forEach(function(d){ if(d){var opt=document.createElement("option");opt.value=p;d.appendChild(opt);}});
+  rates.forEach(function(r) {
+    if (r.project && !seen[r.project]) {
+      seen[r.project] = 1;
+      [dl, dl2].forEach(function(d){ if(d){ var opt=document.createElement("option"); opt.value=r.project; d.appendChild(opt); }});
     }
-  };
-  _projects.forEach(addOpt);
-  rates.forEach(function(r){ addOpt(r.project); });
-  apiCall('getProjectsList', null, function(projs){ (projs||[]).forEach(addOpt); });
+  });
+  apiCall('getProjectsList', null, function(projs){
+    projs.forEach(function(p) {
+      if (!seen[p]) {
+        seen[p] = 1;
+        [dl, dl2].forEach(function(d){ if(d){ var opt=document.createElement("option"); opt.value=p; d.appendChild(opt); }});
+      }
+    });
+  });
 }
 
 // ===== הוספה ידנית =====
@@ -835,10 +776,10 @@ function loadManualSelects() {
   if (dl) {
     dl.innerHTML = "";
     var seen = {};
-    var addDlOpt = function(p){ if(p&&!seen[p]){seen[p]=1; var o=document.createElement("option"); o.value=p; dl.appendChild(o);} };
-    _projects.forEach(addDlOpt);
-    rates.forEach(function(r){ addDlOpt(r.project); });
-    apiCall('getProjectsList', null, function(projs){ (projs||[]).forEach(addDlOpt); });
+    rates.forEach(function(r){ if(r.project&&!seen[r.project]){seen[r.project]=1; dl.innerHTML+="<option value='"+r.project+"'>";} });
+    apiCall('getProjectsList', null, function(projs){
+      projs.forEach(function(p){ if(!seen[p]){seen[p]=1; dl.innerHTML+="<option value='"+p+"'>";} });
+    });
   }
   apiCall('getWorkersList', null, function(workers){
     var sel = document.getElementById("manualName");
@@ -850,10 +791,6 @@ function loadManualSelects() {
 function getWorkerRecord(name, proj) {
   for (var i = 0; i < rates.length; i++) {
     if (rates[i].name === name.trim() && rates[i].project === proj.trim()) return rates[i];
-  }
-  // fallback — שם בלבד
-  for (var i = 0; i < rates.length; i++) {
-    if (rates[i].name === name.trim()) return rates[i];
   }
   return null;
 }
@@ -1011,7 +948,6 @@ function findClosest(name) {
 }
 
 function parseList() {
-  _pendingProjectFix = {};
   var raw=document.getElementById("rawText").value.trim();
   if(!raw){showToast("הדבק טקסט קודם","var(--orange)");return;}
   var lines=raw.split("\n");
@@ -1035,16 +971,6 @@ function parseList() {
       var pm=line.match(/[\(\uFF08]([^\)\uFF09]+)[\)\uFF09]/);
       if(pm){proj=pm[1].trim();line=line.replace(pm[0],"").trim();}
       if(!proj) errors.push("שורה \""+line.trim()+"\": חסר פרויקט (בסוגריים)");
-      if(proj && _projects.length){
-        var cpMatch=findClosestProject(proj);
-        if(cpMatch){
-          // שמור את השמות ב-map גלובלי כדי שהכפתור יוכל לגשת אליהם
-          _pendingProjectFix = _pendingProjectFix || {};
-          var fixKey = "fix_" + Object.keys(_pendingProjectFix).length;
-          _pendingProjectFix[fixKey] = {wrong: proj, correct: cpMatch};
-          errors.push("פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+cpMatch+"\"? <button class='btn-add-inline' style='background:rgba(52,211,153,.2);color:var(--green);border-color:var(--green)' onclick='applyProjectFix(\""+fixKey+"\")'>✅ כן</button>");
-        }
-      }
       var hasSep=line.indexOf(",")>=0||line.indexOf("\u060C")>=0||line.indexOf("\u061B")>=0;
       if(!hasSep&&line.split(" ").filter(Boolean).length>=2){errors.push("שורה \""+line+"\": חסר פסיק בין שמות");return;}
       var names=line.split(/[,\u060C\u061B]/).map(function(n){return n.trim();}).filter(Boolean);
@@ -1267,24 +1193,6 @@ function saveNewEmployee() {
   }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
 }
 function acceptSuggestion(wrong,correct){ var ta=document.getElementById("rawText"); ta.value=ta.value.replace(new RegExp(wrong,"g"),correct); parseList(); }
-function acceptProjectSuggestion(wrong,correct){
-  var ta=document.getElementById("rawText");
-  while(ta.value.indexOf(wrong)>=0){
-    ta.value=ta.value.replace(wrong,correct);
-  }
-  parseList();
-}
-var _pendingProjectFix = {};
-function applyProjectFix(key){
-  var fix = _pendingProjectFix[key];
-  if(!fix) return;
-  var ta=document.getElementById("rawText");
-  while(ta.value.indexOf(fix.wrong)>=0){
-    ta.value=ta.value.replace(fix.wrong, fix.correct);
-  }
-  _pendingProjectFix = {};
-  parseList();
-}
 
 // ===== מפרעות =====
 function loadMifraotTab(){
@@ -1323,35 +1231,13 @@ function doLoadMifraList(){
   document.getElementById("mifraList").innerHTML="<div class='loading'>טוען...</div>";
   apiCall('getAllMifraot', null, function(rows){
     var el=document.getElementById("mifraList");
-    var sumEl=document.getElementById("mifraSummary");
-    if(!rows||!rows.length){
-      el.innerHTML="<div class='loading'>אין מפרעות עדיין</div>";
-      if(sumEl) sumEl.innerHTML=""; return;
-    }
-    var map={};
-    rows.forEach(function(r){
-      var ym=(r.date||"").substring(0,7); if(!ym) return;
-      if(!map[ym]) map[ym]={};
-      if(!map[ym][r.name]) map[ym][r.name]=0;
-      map[ym][r.name]+=r.amount;
-    });
-    var hm=["","ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
-    var sumHtml="";
-    Object.keys(map).sort().reverse().forEach(function(ym){
-      var p=ym.split("-");
-      var total=Object.keys(map[ym]).reduce(function(s,n){return s+map[ym][n];},0);
-      sumHtml+="<div style='margin-bottom:14px'><div style='font-weight:700;font-size:.88rem;color:var(--accent);border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:6px'>📅 "+hm[parseInt(p[1])]+" "+p[0]+" — <span style='color:var(--green)'>"+total.toLocaleString()+" ₪</span></div>";
-      Object.keys(map[ym]).sort().forEach(function(name){
-        sumHtml+="<div style='display:flex;justify-content:space-between;padding:5px 10px;background:var(--bg3);border-radius:7px;margin-bottom:3px'><span style='font-weight:600'>"+name+"</span><span style='color:var(--green);font-weight:700'>"+map[ym][name].toLocaleString()+" ₪</span></div>";
-      });
-      sumHtml+="</div>";
-    });
-    if(sumEl) sumEl.innerHTML=sumHtml;
+    if(!rows||!rows.length){el.innerHTML="<div class='loading'>אין מפרעות עדיין</div>";return;}
     var out="";
     rows.forEach(function(r,i){
       var ymd=r.date||"";
       var df=ymd.length>=10?ymd.substr(8,2)+"/"+ymd.substr(5,2)+"/"+ymd.substr(0,4):ymd;
-      out+="<div class='mifra-row'><div><div class='mifra-name'>"+r.name+"</div><div class='mifra-meta'>"+df+(r.note?" · "+r.note:"")+(r.project?" | "+r.project:"")+"</div></div>";
+      out+="<div class='mifra-row'>";
+      out+="<div><div class='mifra-name'>"+r.name+"</div><div class='mifra-meta'>"+df+(r.note?" · "+r.note:"")+(r.project?" | "+r.project:"")+"</div></div>";
       out+="<div style='text-align:left'><div class='mifra-amount'>"+r.amount.toLocaleString()+" ₪</div><button onclick='doDeleteMifra("+i+")' style='background:none;border:none;color:var(--red);cursor:pointer;font-size:.78rem;padding:2px 0'>🗑️ מחק</button></div></div>";
     });
     el.innerHTML=out;
@@ -1541,110 +1427,6 @@ function confirmDeleteWorker(){
 </script>
 
 <script>
-var _projects = [];
-
-// ===== ניהול פרויקטים =====
-function loadProjectsTab() {
-  apiCall('getProjectsListSaved', null, function(projs){
-    _projects = (projs||[]).filter(Boolean).sort();
-    renderProjectsList();
-    refreshProjectsList();
-  }, function(){
-    _projects = [];
-    renderProjectsList();
-  });
-}
-
-function renderProjectsList() {
-  var el = document.getElementById("projectsListDisplay");
-  if(!el) return;
-  if (!_projects.length) {
-    el.innerHTML="<div class='loading'>אין פרויקטים עדיין — הוסף פרויקט למעלה</div>";
-    return;
-  }
-  var html="";
-  _projects.forEach(function(p,i){
-    html+="<div class='rrow'>";
-    html+="<span style='flex:1;font-weight:600;font-size:.95rem'>🏗️ "+p+"</span>";
-    html+="<button onclick='deleteProject("+i+")' style='background:none;border:none;cursor:pointer;color:var(--red);font-size:1rem;padding:4px 8px'>🗑️</button>";
-    html+="</div>";
-  });
-  el.innerHTML=html;
-}
-
-function addProject() {
-  var name = document.getElementById("nwProjName").value.trim();
-  if(!name){ showToast("הכנס שם פרויקט","var(--orange)"); return; }
-  if(_projects.indexOf(name)>=0){ showToast("פרויקט כבר קיים","var(--orange)"); return; }
-  _projects.push(name);
-  _projects.sort();
-  document.getElementById("nwProjName").value="";
-  apiCall('saveProjectsList', {projects:_projects}, function(){
-    renderProjectsList();
-    refreshProjectsList();
-    showToast(name+" נוסף ✅");
-  }, function(){
-    renderProjectsList();
-    refreshProjectsList();
-    showToast(name+" נוסף ✅ (ללא שמירה לשרת)","var(--orange)");
-  });
-}
-
-function deleteProject(i) {
-  if(!confirm("למחוק פרויקט \""+_projects[i]+"\"?")) return;
-  var deleted = _projects.splice(i,1)[0];
-  apiCall('saveProjectsList', {projects:_projects}, function(){
-    renderProjectsList();
-    refreshProjectsList();
-    showToast(deleted+" נמחק","var(--red)");
-  }, function(){
-    renderProjectsList();
-    refreshProjectsList();
-    showToast(deleted+" נמחק","var(--red)");
-  });
-}
-
-function findClosestProject(proj) {
-  // רק מה שהוגדר ב"פרויקטים" — לא מה שזוכר מהעובדים
-  var knownProjs = _projects.slice();
-  if(!knownProjs.length) return null;
-  var projLower = proj.trim().toLowerCase();
-
-  // 1. התאמה מדויקת
-  if(knownProjs.indexOf(proj.trim())>=0) return null;
-
-  // 2. האם מה שנכתב מופיע בתוך שם פרויקט ידוע (contains)
-  var contained = null;
-  knownProjs.forEach(function(p){
-    if(p.toLowerCase().indexOf(projLower)>=0 || projLower.indexOf(p.toLowerCase())>=0){
-      if(!contained || p.length < contained.length) contained = p;
-    }
-  });
-  if(contained) return contained;
-
-  // 3. דמיון לוונשטיין — סף נמוך יותר (50%)
-  var best=null, bestScore=0;
-  knownProjs.forEach(function(p){
-    var dist=levenshtein(projLower, p.toLowerCase());
-    var score=(Math.max(projLower.length,p.length)-dist)/Math.max(projLower.length,p.length);
-    if(score>bestScore){ bestScore=score; best=p; }
-  });
-  return bestScore>=0.5 ? best : null;
-}
-
-function addProjectToWorker(workerName) {
-  showTab(1);
-  setTimeout(function(){
-    document.getElementById("nwName").value = workerName;
-    document.getElementById("nwProj").value = "";
-    document.getElementById("nwAmt").value = "";
-    document.getElementById("nwHourly").value = "";
-    document.getElementById("nwName").scrollIntoView({behavior:"smooth",block:"center"});
-    document.getElementById("nwProj").focus();
-    showToast("הוסף פרויקט נוסף ל"+workerName,"var(--accent)");
-  }, 100);
-}
-
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js').catch(function(){});
