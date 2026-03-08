@@ -1204,15 +1204,13 @@ function loadMifraotTab(){
   var sel1=document.getElementById("mifraName"),sel2=document.getElementById("mifraReportWorker");
   sel1.innerHTML="<option value=''>בחר עובד...</option>"; sel2.innerHTML="<option value=''>כל העובדים</option>";
   var seen={};
-  // מילוי מ-rates
-  rates.forEach(function(r){ if(!seen[r.name]){seen[r.name]=1; sel1.innerHTML+="<option value='"+r.name+"'>"+r.name+"</option>"; sel2.innerHTML+="<option value='"+r.name+"'>"+r.name+"</option>";} });
-  // מילוי נוסף מהיסטוריית מפרעות (עובדים שאולי לא ב-rates)
-  apiCall('getAllMifraot', null, function(allRows){
-    (allRows||[]).forEach(function(r){
-      if(r.name && !seen[r.name]){
-        seen[r.name]=1;
-        sel1.innerHTML+="<option value='"+r.name+"'>"+r.name+"</option>";
-        sel2.innerHTML+="<option value='"+r.name+"'>"+r.name+"</option>";
+  // מילוי מרשימת העובדים הרשמית
+  apiCall('getWorkersList', null, function(workers){
+    workers.forEach(function(w){
+      if(!seen[w]){
+        seen[w]=1;
+        sel1.innerHTML+="<option value='"+w+"'>"+w+"</option>";
+        sel2.innerHTML+="<option value='"+w+"'>"+w+"</option>";
       }
     });
   });
