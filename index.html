@@ -620,10 +620,7 @@ function apiCall(action, payload, onSuccess, onError) {
 // ===== TABS =====
 function showTab(n) {
   if (n === 1) loadRates();
-document.addEventListener("DOMContentLoaded", function(){
-  var ta = document.getElementById("rawText");
-  if(ta) ta.addEventListener("input", function(){ _ignoredProjects=[]; });
-});
+
   if (n === 2) loadReportData();
   if (n === 3) loadSalaryData();
   if (n === 4) loadMifraotTab();
@@ -976,27 +973,20 @@ function findClosestProject(proj) {
   _knownProjects.forEach(function(p){ if(p) known[p]=1; });
   var knownProjs=Object.keys(known);
   if(!knownProjs.length) return null;
-  if(knownProjs.indexOf(proj.trim())>=0) return null; // התאמה מדויקת — אין צורך
   var projL=proj.trim().toLowerCase();
+  if(knownProjs.some(function(p){ return p.toLowerCase()===projL; })) return null;
   var best=null, bestScore=0;
   knownProjs.forEach(function(p){
     var pL=p.toLowerCase();
     var score=0;
-    // 1. האחד מכיל את השני
     if(pL.indexOf(projL)>=0 || projL.indexOf(pL)>=0){
       score=0.85;
     } else {
-      // 2. levenshtein רגיל
       var dist=levenshtein(projL,pL);
       score=(Math.max(projL.length,pL.length)-dist)/Math.max(projL.length,pL.length);
-      // 3. בונוס על מילים משותפות
-      var wordsA=projL.split(/\s+/), wordsB=pL.split(/\s+/);
-      var shared=wordsA.filter(function(w){ return wordsB.indexOf(w)>=0; }).length;
-      if(shared>0) score=Math.max(score, shared/Math.max(wordsA.length,wordsB.length)*0.9);
     }
     if(score>bestScore){ bestScore=score; best=p; }
   });
-  // הצע אם יש דמיון כלשהו (סף נמוך מאוד — 0.35)
   return bestScore>=0.35?best:null;
 }
 
@@ -1004,13 +994,10 @@ var _pendingFixes={};
 function applyProjectFix(key){
   var fix=_pendingFixes[key];
   if(!fix) return;
-  // עדכן את הטקסט
   var ta=document.getElementById("rawText");
-  var oldVal=ta.value;
-  while(ta.value.indexOf(fix.wrong)>=0){
-    ta.value=ta.value.replace(fix.wrong,fix.correct);
+  if(fix.wrong && fix.correct && fix.wrong!==fix.correct){
+    ta.value=ta.value.split(fix.wrong).join(fix.correct);
   }
-  // עדכן את parsedRows ישירות — בלי לקרוא parseList מחדש
   parsedRows.forEach(function(r){ if(r.project===fix.wrong) r.project=fix.correct; });
   _pendingFixes={};
   document.getElementById("errorsBox").innerHTML="";
@@ -1048,7 +1035,7 @@ function parseList() {
       var pm=line.match(/[\(\uFF08]([^\)\uFF09]+)[\)\uFF09]/);
       if(pm){proj=pm[1].trim();line=line.replace(pm[0],"").trim();}
       if(!proj) errors.push("שורה \""+line.trim()+"\": חסר פרויקט (בסוגריים)");
-      if(proj && _ignoredProjects.indexOf(proj)<0){
+      if(proj){
         var cpMatch=findClosestProject(proj);
         if(cpMatch){
           var fixKey="pfix_"+Object.keys(_pendingFixes).length;
