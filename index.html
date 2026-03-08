@@ -756,8 +756,15 @@ function saveRates() {
 function loadRates(andMifra) {
   apiCall('getWorkerRates', null, function(data){
     rates = data || [];
-    renderRates(); loadManualSelects(); refreshProjectsList();
-    if(andMifra) loadMifraotTab();
+    // טען פרויקטים שמורים ואז רנדר הכל
+    apiCall('getProjectsListSaved', null, function(projs){
+      _projects = (projs||[]).filter(Boolean).sort();
+      renderRates(); loadManualSelects(); refreshProjectsList();
+      if(andMifra) loadMifraotTab();
+    }, function(){
+      renderRates(); loadManualSelects(); refreshProjectsList();
+      if(andMifra) loadMifraotTab();
+    });
   });
 }
 loadRates();
@@ -804,10 +811,10 @@ function loadManualSelects() {
   if (dl) {
     dl.innerHTML = "";
     var seen = {};
-    rates.forEach(function(r){ if(r.project&&!seen[r.project]){seen[r.project]=1; dl.innerHTML+="<option value='"+r.project+"'>";} });
-    apiCall('getProjectsList', null, function(projs){
-      projs.forEach(function(p){ if(!seen[p]){seen[p]=1; dl.innerHTML+="<option value='"+p+"'>";} });
-    });
+    var addDlOpt = function(p){ if(p&&!seen[p]){seen[p]=1; var o=document.createElement("option"); o.value=p; dl.appendChild(o);} };
+    _projects.forEach(addDlOpt);
+    rates.forEach(function(r){ addDlOpt(r.project); });
+    apiCall('getProjectsList', null, function(projs){ (projs||[]).forEach(addDlOpt); });
   }
   apiCall('getWorkersList', null, function(workers){
     var sel = document.getElementById("manualName");
@@ -1003,9 +1010,9 @@ function parseList() {
       var pm=line.match(/[\(\uFF08]([^\)\uFF09]+)[\)\uFF09]/);
       if(pm){proj=pm[1].trim();line=line.replace(pm[0],"").trim();}
       if(!proj) errors.push("שורה \""+line.trim()+"\": חסר פרויקט (בסוגריים)");
-      if(proj){
+      if(proj && _projects.length){
         var cpMatch=findClosestProject(proj);
-        if(cpMatch) {
+        if(cpMatch){
           errors.push("פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+cpMatch+"\"? <button class='btn-add-inline' style='background:rgba(52,211,153,.2);color:var(--green);border-color:var(--green)' onclick='acceptProjectSuggestion(\""+proj+"\",\""+cpMatch+"\")'>✅ כן</button>");
         }
       }
