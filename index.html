@@ -480,6 +480,11 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
       <button onclick="doMifraReport()" class="btn bg">📄 הוצא דוח מפרעות</button>
     </div>
 
+    <div class="crd" id="mifraSummaryCard" style="display:none">
+      <h2>📊 סיכום מפרעות</h2>
+      <div id="mifraSummary"></div>
+    </div>
+
     <div class="crd">
       <h2>📋 היסטוריית מפרעות</h2>
       <div id="mifraList" class="loading">טוען...</div>
@@ -1199,7 +1204,18 @@ function loadMifraotTab(){
   var sel1=document.getElementById("mifraName"),sel2=document.getElementById("mifraReportWorker");
   sel1.innerHTML="<option value=''>בחר עובד...</option>"; sel2.innerHTML="<option value=''>כל העובדים</option>";
   var seen={};
+  // מילוי מ-rates
   rates.forEach(function(r){ if(!seen[r.name]){seen[r.name]=1; sel1.innerHTML+="<option value='"+r.name+"'>"+r.name+"</option>"; sel2.innerHTML+="<option value='"+r.name+"'>"+r.name+"</option>";} });
+  // מילוי נוסף מהיסטוריית מפרעות (עובדים שאולי לא ב-rates)
+  apiCall('getAllMifraot', null, function(allRows){
+    (allRows||[]).forEach(function(r){
+      if(r.name && !seen[r.name]){
+        seen[r.name]=1;
+        sel1.innerHTML+="<option value='"+r.name+"'>"+r.name+"</option>";
+        sel2.innerHTML+="<option value='"+r.name+"'>"+r.name+"</option>";
+      }
+    });
+  });
   document.getElementById("mifraDate").value=new Date().toISOString().split("T")[0];
 
   // חודשים — משתי מקורות: נוכחות + מפרעות
@@ -1231,7 +1247,40 @@ function doLoadMifraList(){
   document.getElementById("mifraList").innerHTML="<div class='loading'>טוען...</div>";
   apiCall('getAllMifraot', null, function(rows){
     var el=document.getElementById("mifraList");
-    if(!rows||!rows.length){el.innerHTML="<div class='loading'>אין מפרעות עדיין</div>";return;}
+    var sumCard=document.getElementById("mifraSummaryCard");
+    var sumEl=document.getElementById("mifraSummary");
+    if(!rows||!rows.length){
+      el.innerHTML="<div class='loading'>אין מפרעות עדיין</div>";
+      if(sumCard) sumCard.style.display="none";
+      return;
+    }
+    // בנה סיכום לפי חודש → עובד
+    var map={};
+    rows.forEach(function(r){
+      var ym=(r.date||"").substring(0,7);
+      if(!ym) return;
+      if(!map[ym]) map[ym]={};
+      if(!map[ym][r.name]) map[ym][r.name]=0;
+      map[ym][r.name]+=r.amount;
+    });
+    var hm=["","ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+    var sumHtml="";
+    Object.keys(map).sort().reverse().forEach(function(ym){
+      var p=ym.split("-");
+      var monthTotal=Object.keys(map[ym]).reduce(function(s,n){return s+map[ym][n];},0);
+      sumHtml+="<div style='margin-bottom:16px'>";
+      sumHtml+="<div style='font-weight:700;font-size:.88rem;color:var(--accent);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:8px'>";
+      sumHtml+="📅 "+hm[parseInt(p[1])]+" "+p[0]+" — <span style='color:var(--green)'>"+monthTotal.toLocaleString()+" ₪</span></div>";
+      Object.keys(map[ym]).sort().forEach(function(name){
+        sumHtml+="<div style='display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg3);border-radius:8px;margin-bottom:4px'>";
+        sumHtml+="<span style='font-weight:600'>"+name+"</span>";
+        sumHtml+="<span style='color:var(--green);font-weight:700'>"+map[ym][name].toLocaleString()+" ₪</span></div>";
+      });
+      sumHtml+="</div>";
+    });
+    if(sumEl) sumEl.innerHTML=sumHtml;
+    if(sumCard) sumCard.style.display="block";
+    // רשימת מפרעות
     var out="";
     rows.forEach(function(r,i){
       var ymd=r.date||"";
