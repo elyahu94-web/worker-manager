@@ -1011,6 +1011,7 @@ function findClosest(name) {
 }
 
 function parseList() {
+  _pendingProjectFix = {};
   var raw=document.getElementById("rawText").value.trim();
   if(!raw){showToast("הדבק טקסט קודם","var(--orange)");return;}
   var lines=raw.split("\n");
@@ -1037,7 +1038,11 @@ function parseList() {
       if(proj && _projects.length){
         var cpMatch=findClosestProject(proj);
         if(cpMatch){
-          errors.push("פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+cpMatch+"\"? <button class='btn-add-inline' style='background:rgba(52,211,153,.2);color:var(--green);border-color:var(--green)' onclick='acceptProjectSuggestion(\""+proj+"\",\""+cpMatch+"\")'>✅ כן</button>");
+          // שמור את השמות ב-map גלובלי כדי שהכפתור יוכל לגשת אליהם
+          _pendingProjectFix = _pendingProjectFix || {};
+          var fixKey = "fix_" + Object.keys(_pendingProjectFix).length;
+          _pendingProjectFix[fixKey] = {wrong: proj, correct: cpMatch};
+          errors.push("פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+cpMatch+"\"? <button class='btn-add-inline' style='background:rgba(52,211,153,.2);color:var(--green);border-color:var(--green)' onclick='applyProjectFix(\""+fixKey+"\")'>✅ כן</button>");
         }
       }
       var hasSep=line.indexOf(",")>=0||line.indexOf("\u060C")>=0||line.indexOf("\u061B")>=0;
@@ -1267,6 +1272,17 @@ function acceptProjectSuggestion(wrong,correct){
   while(ta.value.indexOf(wrong)>=0){
     ta.value=ta.value.replace(wrong,correct);
   }
+  parseList();
+}
+var _pendingProjectFix = {};
+function applyProjectFix(key){
+  var fix = _pendingProjectFix[key];
+  if(!fix) return;
+  var ta=document.getElementById("rawText");
+  while(ta.value.indexOf(fix.wrong)>=0){
+    ta.value=ta.value.replace(fix.wrong, fix.correct);
+  }
+  _pendingProjectFix = {};
   parseList();
 }
 
