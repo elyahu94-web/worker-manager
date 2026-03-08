@@ -782,18 +782,21 @@ function renderProjectsTab() {
   el.innerHTML = html;
 }
 
-function addProjectToList() {
-  var inp = document.getElementById("newProjName");
-  var name = inp.value.trim();
+function addProjectToList(nameOverride) {
+  var name = nameOverride;
+  if(!name){
+    var inp = document.getElementById("newProjName");
+    name = inp.value.trim();
+    if(inp) inp.value = "";
+  }
   if(!name){ showToast("הכנס שם פרויקט","var(--orange)"); return; }
   if(_projects.indexOf(name)>=0){ showToast("פרויקט כבר קיים","var(--orange)"); return; }
   _projects.push(name);
   _projects.sort();
   _knownProjects = _projects.slice();
-  inp.value = "";
   renderProjectsTab();
   apiCall('saveProjectsList', {projects: _projects}, function(){
-    showToast(name+" נוסף ✅");
+    showToast(name+" נוסף לפרויקטים ✅");
   }, function(){ showToast(name+" נוסף (לא נשמר לשיטס)","var(--orange)"); });
 }
 
@@ -1085,6 +1088,48 @@ function ignoreProjectFix(key){
     document.getElementById("submitBtn").disabled=false;
   }
 }
+function addNewProjectFromImport(projName, key){
+  addProjectToList(projName);
+  delete _pendingFixes[key];
+  var el=document.getElementById("warn_"+key);
+  if(el) el.style.display="none";
+  if(!Object.keys(_pendingFixes).length){
+    document.getElementById("errorsBox").innerHTML="";
+    document.getElementById("submitBtn").disabled=false;
+  }
+}
+function assignToExisting(wrong, key, correct){
+  if(!correct) return;
+  var ta=document.getElementById("rawText");
+  ta.value=ta.value.split(wrong).join(correct);
+  parsedRows.forEach(function(r){ if(r.project===wrong) r.project=correct; });
+  delete _pendingFixes[key];
+  var el=document.getElementById("warn_"+key);
+  if(el) el.style.display="none";
+  if(!Object.keys(_pendingFixes).length){
+    document.getElementById("errorsBox").innerHTML="";
+    document.getElementById("submitBtn").disabled=false;
+  }
+  renderPreview();
+}
+function renameProjectInImport(wrong, key){
+  var inp=document.getElementById("ren_"+key);
+  var newName=inp?inp.value.trim():"";
+  if(!newName){ showToast("הכנס שם חדש","var(--orange)"); return; }
+  var ta=document.getElementById("rawText");
+  ta.value=ta.value.split(wrong).join(newName);
+  parsedRows.forEach(function(r){ if(r.project===wrong) r.project=newName; });
+  // שאל אם להוסיף לרשימה
+  if(_projects.indexOf(newName)<0) addProjectToList(newName);
+  delete _pendingFixes[key];
+  var el=document.getElementById("warn_"+key);
+  if(el) el.style.display="none";
+  if(!Object.keys(_pendingFixes).length){
+    document.getElementById("errorsBox").innerHTML="";
+    document.getElementById("submitBtn").disabled=false;
+  }
+  renderPreview();
+}
 
 function parseList() {
   _pendingFixes={};
@@ -1112,14 +1157,35 @@ function parseList() {
       if(pm){proj=pm[1].trim();line=line.replace(pm[0],"").trim();}
       if(!proj) errors.push("שורה \""+line.trim()+"\": חסר פרויקט (בסוגריים)");
       if(proj){
-        var cpMatch=findClosestProject(proj);
-        if(cpMatch){
-          var fixKey="pfix_"+Object.keys(_pendingFixes).length;
-          _pendingFixes[fixKey]={wrong:proj,correct:cpMatch};
-          projWarnings.push("<span id='warn_"+fixKey+"' class='err-fix-row' data-fix-key='"+fixKey+"'>פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+cpMatch+"\"?&nbsp;"
-            +"<button class='btn-add-inline' style='background:rgba(52,211,153,.2);color:var(--green);border-color:var(--green)' onclick='applyProjectFix(\""+fixKey+"\")'>✅ כן, תקן</button>&nbsp;"
-            +"<button class='btn-add-inline' style='background:rgba(251,191,36,.15);color:var(--yellow);border-color:var(--yellow)' onclick='ignoreProjectFix(\""+fixKey+"\")'>➡️ המשך בכל זאת</button>"
-            +"</span>");
+        if(_projects.length){
+          var cpMatch=findClosestProject(proj);
+          if(cpMatch){
+            // פרויקט דומה — הצע תיקון
+            var fixKey="pfix_"+Object.keys(_pendingFixes).length;
+            _pendingFixes[fixKey]={wrong:proj,correct:cpMatch};
+            projWarnings.push("<span id='warn_"+fixKey+"' class='err-fix-row' data-fix-key='"+fixKey+"'>פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+cpMatch+"\"?&nbsp;"
+              +"<button class='btn-add-inline' style='background:rgba(52,211,153,.2);color:var(--green);border-color:var(--green)' onclick='applyProjectFix(\""+fixKey+"\")'>✅ כן, תקן</button>&nbsp;"
+              +"<button class='btn-add-inline' style='background:rgba(251,191,36,.15);color:var(--yellow);border-color:var(--yellow)' onclick='ignoreProjectFix(\""+fixKey+"\")'>➡️ המשך בכל זאת</button>"
+              +"</span>");
+          } else if(_projects.indexOf(proj)<0){
+            // פרויקט חדש לגמרי
+            var newKey="pnew_"+proj.replace(/[^a-zA-Z0-9]/g,"_");
+            if(!_pendingFixes[newKey]){
+              _pendingFixes[newKey]={newProj:proj};
+              var existingOpts="<option value=''></option>";
+              _projects.forEach(function(p){ existingOpts+="<option value='"+p+"'>"+p+"</option>"; });
+              projWarnings.push("<span id='warn_"+newKey+"' class='err-fix-row'>"
+                +"פרויקט <b>\""+proj+"\": חדש</b> — מה לעשות?<br>"
+                +"<div style='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center'>"
+                +"<button class='btn-add-inline' style='background:rgba(52,211,153,.2);color:var(--green);border-color:var(--green)' onclick='addNewProjectFromImport(\""+proj+"\",\""+newKey+"\")'>✅ הוסף לרשימה</button>"
+                +"<span style='color:var(--text3);font-size:.75rem'>או שייך לקיים:</span>"
+                +"<select id='sel_"+newKey+"' onchange='assignToExisting(\""+proj+"\",\""+newKey+"\",this.value)' style='padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text1);font-family:Heebo,Arial;font-size:.8rem'>"+existingOpts+"</select>"
+                +"<span style='color:var(--text3);font-size:.75rem'>או שנה שם:</span>"
+                +"<input id='ren_"+newKey+"' placeholder='שם חדש...' style='width:120px;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text1);font-family:Heebo,Arial;font-size:.8rem'>"
+                +"<button class='btn-add-inline' style='background:rgba(79,142,247,.2);color:var(--accent);border-color:var(--accent)' onclick='renameProjectInImport(\""+proj+"\",\""+newKey+"\")'>✏️ שנה</button>"
+                +"</div></span>");
+            }
+          }
         }
       }
       var hasSep=line.indexOf(",")>=0||line.indexOf("\u060C")>=0||line.indexOf("\u061B")>=0;
