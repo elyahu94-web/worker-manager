@@ -419,12 +419,7 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
         <button id="btnTypeHourly" class="type-btn" onclick="setRateType('שעתי')">🕐 לפי שעה</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-        <input id="nwName" placeholder="שם עובד" style="flex:2;min-width:100px;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;direction:rtl;color:var(--text1)">
-        <div style="flex:2;min-width:100px;position:relative">
-          <input id="nwProj" placeholder="פרויקט" list="projectsList" autocomplete="off"
-            style="width:100%;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;direction:rtl;color:var(--text1)">
-          <datalist id="projectsList"></datalist>
-        </div>
+        <input id="nwName" placeholder="שם עובד" style="flex:3;min-width:120px;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;direction:rtl;color:var(--text1)">
         <input id="nwAmt" type="number" placeholder="₪/יום" style="flex:1;min-width:80px;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;color:var(--text1)">
         <input id="nwHourly" type="number" placeholder="₪/שעה" style="flex:1;min-width:80px;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;color:var(--text1);display:none">
         <button onclick="addRate()" style="padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:1.1rem">➕</button>
@@ -643,15 +638,7 @@ function showToast(m, c) {
 
 // ===== RATES =====
 function getRate(name, proj) {
-  // חיפוש מדויק שם + פרויקט
-  for (var i = 0; i < rates.length; i++) {
-    var r = rates[i];
-    if (r.name === name.trim() && r.project === proj.trim()) {
-      if (r.rateType === "שעתי" && r.hourlyRate) return Math.round(r.hourlyRate * 8);
-      return r.amount || "";
-    }
-  }
-  // fallback — עובד בפרויקט שונה: קח את הסכום הרגיל שלו
+  // חיפוש לפי שם בלבד — הסכום קבוע בלי קשר לפרויקט
   for (var i = 0; i < rates.length; i++) {
     var r = rates[i];
     if (r.name === name.trim()) {
@@ -693,8 +680,7 @@ function renderRates() {
       : "<span class='badge-green'>📅 יומי</span>";
     html += "<div class='rrow'>";
     html += "<input type='checkbox' class='workerChk' data-name='"+r.name+"' onchange='updateDeleteBtn()' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0'>";
-    html += "<input value='"+r.name+"' onchange='rates["+i+"].name=this.value' placeholder='שם' style='flex:2;min-width:80px'>";
-    html += "<input value='"+r.project+"' onchange='rates["+i+"].project=this.value' placeholder='פרויקט' style='flex:2;min-width:80px'>";
+    html += "<input value='"+r.name+"' onchange='rates["+i+"].name=this.value' placeholder='שם' style='flex:3;min-width:120px'>";
     if (isH) {
       html += "<input type='number' value='"+(r.hourlyRate||0)+"' onchange='rates["+i+"].hourlyRate=this.value' placeholder='₪/שעה' style='flex:1;min-width:65px'>";
     } else {
@@ -708,25 +694,22 @@ function renderRates() {
 
 function addRate() {
   var n = document.getElementById("nwName").value.trim();
-  var p = document.getElementById("nwProj").value.trim();
   var isH = (_rateType === "שעתי");
   var a = isH ? document.getElementById("nwHourly").value : document.getElementById("nwAmt").value;
-  if (!n||!p||!a) { showToast("מלא שם, פרויקט וסכום","var(--orange)"); return; }
-  // בדוק כפילות של שם+פרויקט יחד (אותו עובד יכול להיות בפרויקטים שונים)
-  var dup = rates.some(function(r){ return r.name === n && r.project === p; });
-  if (dup) { showToast(n+" כבר קיים בפרויקט "+p,"var(--orange)"); return; }
-  var newWorker = {name:n,project:p,amount:isH?0:parseFloat(a),rateType:_rateType,hourlyRate:isH?parseFloat(a):0};
+  if (!n||!a) { showToast("מלא שם וסכום","var(--orange)"); return; }
+  var dup = rates.some(function(r){ return r.name === n; });
+  if (dup) { showToast(n+" כבר קיים","var(--orange)"); return; }
+  var newWorker = {name:n,project:"",amount:isH?0:parseFloat(a),rateType:_rateType,hourlyRate:isH?parseFloat(a):0};
   rates.push(newWorker);
   document.getElementById("nwName").value="";
-  document.getElementById("nwProj").value="";
   document.getElementById("nwAmt").value="";
   document.getElementById("nwHourly").value="";
-  renderRates(); refreshProjectsList();
+  renderRates();
   apiCall('appendWorkerRate', {worker: newWorker}, function(){
     apiCall('getWorkerRates', null, function(data){
       rates = data || [];
-      renderRates(); loadManualSelects(); loadMifraotTab(); refreshProjectsList();
-      showToast(n+" ("+p+") נוסף ✅");
+      renderRates(); loadManualSelects(); loadMifraotTab();
+      showToast(n+" נוסף ✅");
     });
   }, function(e){ showToast(e.message || "שגיאה","var(--red)"); });
 }
