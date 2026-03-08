@@ -593,6 +593,7 @@ var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxT3TB1RRXh72-8A9
 
 var rates = [];
 var parsedRows = [];
+var _knownProjects = []; // פרויקטים מהשיטס
 var heMonths = ["","ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
 // ===== API CALL =====
@@ -738,6 +739,10 @@ function saveRates() {
 function loadRates() {
   apiCall('getWorkerRates', null, function(data){
     rates = data || [];
+    // טען גם רשימת פרויקטים ידועים מהשיטס
+    apiCall('getProjectsList', null, function(projs){
+      _knownProjects = projs || [];
+    });
     renderRates(); loadManualSelects(); refreshProjectsList();
   });
 }
@@ -964,6 +969,7 @@ function findClosest(name) {
 function findClosestProject(proj) {
   var known={};
   rates.forEach(function(r){ if(r.project) known[r.project]=1; });
+  _knownProjects.forEach(function(p){ if(p) known[p]=1; });
   var knownProjs=Object.keys(known);
   if(!knownProjs.length) return null;
   if(knownProjs.indexOf(proj.trim())>=0) return null; // התאמה מדויקת — אין צורך
@@ -1020,7 +1026,7 @@ function parseList() {
   var raw=document.getElementById("rawText").value.trim();
   if(!raw){showToast("הדבק טקסט קודם","var(--orange)");return;}
   var lines=raw.split("\n");
-  parsedRows=[]; var errors=[];
+  parsedRows=[]; var errors=[]; var projWarnings=[];
   var blocks=[],currentDate="",currentLines=[];
   for(var i=0;i<lines.length;i++){
     var line=lines[i].trim();
@@ -1045,9 +1051,9 @@ function parseList() {
         if(cpMatch){
           var fixKey="pfix_"+Object.keys(_pendingFixes).length;
           _pendingFixes[fixKey]={wrong:proj,correct:cpMatch};
-          errors.push("<span class='err-fix-row' data-fix-key='"+fixKey+"'>פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+cpMatch+"\"?&nbsp;"
+          projWarnings.push("<span class='err-fix-row' data-fix-key='"+fixKey+"'>פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+cpMatch+"\"?&nbsp;"
             +"<button class='btn-add-inline' style='background:rgba(52,211,153,.2);color:var(--green);border-color:var(--green)' onclick='applyProjectFix(\""+fixKey+"\")'>✅ כן, תקן</button>&nbsp;"
-            +"<button class='btn-add-inline' onclick='ignoreProjectFix(\""+fixKey+"\")'>➡️ המשך בכל זאת</button>"
+            +"<button class='btn-add-inline' style='background:rgba(251,191,36,.15);color:var(--yellow);border-color:var(--yellow)' onclick='ignoreProjectFix(\""+fixKey+"\")'>➡️ המשך בכל זאת</button>"
             +"</span>");
         }
       }
@@ -1078,9 +1084,18 @@ function parseList() {
     document.getElementById("previewTitle").textContent="⚠️ תאריך מחוץ לשנה הנוכחית";
     document.getElementById("submitBtn").disabled=true;
   } else if(errors.length){
-    errBox.innerHTML="<div class='err-box'><b>⚠️ שגיאות:</b><br>• "+errors.join("<br>• ")+"</div>";
+    var combined="<div class='err-box'><b>⚠️ שגיאות:</b><br>• "+errors.join("<br>• ")+"</div>";
+    if(projWarnings.length) combined+="<div class='warn-box' style='margin-top:8px'><b>🔍 פרויקטים לא מוכרים:</b><br>• "+projWarnings.join("<br>• ")+"</div>";
+    errBox.innerHTML=combined;
     document.getElementById("previewTitle").textContent="⚠️ נמצאו "+errors.length+" שגיאות";
     document.getElementById("submitBtn").disabled=true;
+  } else if(projWarnings.length){
+    errBox.innerHTML="<div class='warn-box'><b>🔍 פרויקטים לא מוכרים — בדוק לפני שליחה:</b><br>• "+projWarnings.join("<br>• ")+"</div>";
+    document.getElementById("previewTitle").textContent="⚠️ פרויקט לא מוכר — בדוק";
+    document.getElementById("submitBtn").disabled=false; // מאפשר שליחה אחרי בחירה
+    var datesFound=[];
+    parsedRows.forEach(function(r){if(r.date&&datesFound.indexOf(r.date)<0) datesFound.push(r.date);});
+    showToast("בדוק פרויקט לפני שליחה","var(--yellow)");
   } else {
     errBox.innerHTML="";
     document.getElementById("submitBtn").disabled=false;
