@@ -356,8 +356,21 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
         </div>
         <div>
           <label class="lbl">פרויקט</label>
-          <input id="manualProject" list="manualProjectsList" placeholder="בחר או הקלד פרויקט..." autocomplete="off" onchange="manualFillRate()" oninput="manualFillRate()" class="inp">
-          <datalist id="manualProjectsList"></datalist>
+          <div style="display:flex;gap:6px;margin-bottom:4px">
+            <button type="button" id="btnChooseProj" onclick="showProjSelect()" class="btn-add-inline" style="flex:1;padding:8px;font-size:.85rem;background:var(--bg3);border:1px solid var(--border);color:var(--text1);border-radius:8px">📋 בחר מרשימה</button>
+            <button type="button" id="btnTypeProj" onclick="showProjInput()" class="btn-add-inline" style="flex:1;padding:8px;font-size:.85rem;background:var(--bg3);border:1px solid var(--border);color:var(--text1);border-radius:8px">✏️ הקלד חדש</button>
+          </div>
+          <select id="manualProjSelect" style="display:none;width:100%" class="inp" onchange="onProjSelectChange(this.value)">
+            <option value="">בחר פרויקט...</option>
+          </select>
+          <div id="manualProjInputWrap" style="display:none">
+            <input id="manualProjInput" placeholder="הקלד שם פרויקט חדש..." autocomplete="off" class="inp" oninput="onProjInputChange(this.value)">
+            <div id="manualProjNewAlert" style="display:none;margin-top:4px;padding:6px 10px;background:rgba(251,191,36,.15);border:1px solid var(--yellow);border-radius:6px;font-size:.8rem;color:var(--yellow)">
+              ⚠️ פרויקט זה אינו קיים ברשימה —
+              <button type="button" onclick="addProjFromManual()" style="background:rgba(52,211,153,.2);color:var(--green);border:1px solid var(--green);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:Heebo,Arial">✅ הוסף לרשימה</button>
+            </div>
+          </div>
+          <input type="hidden" id="manualProject" oninput="manualFillRate()" onchange="manualFillRate()">
         </div>
       </div>
 
@@ -859,17 +872,59 @@ function setManualEntryType(type) {
   manualFillRate();
 }
 
+function showProjSelect(){
+  document.getElementById("manualProjSelect").style.display="block";
+  document.getElementById("manualProjInputWrap").style.display="none";
+  document.getElementById("btnChooseProj").style.borderColor="var(--accent)";
+  document.getElementById("btnChooseProj").style.color="var(--accent)";
+  document.getElementById("btnTypeProj").style.borderColor="var(--border)";
+  document.getElementById("btnTypeProj").style.color="var(--text1)";
+  document.getElementById("manualProject").value="";
+}
+function showProjInput(){
+  document.getElementById("manualProjSelect").style.display="none";
+  document.getElementById("manualProjInputWrap").style.display="block";
+  document.getElementById("btnTypeProj").style.borderColor="var(--accent)";
+  document.getElementById("btnTypeProj").style.color="var(--accent)";
+  document.getElementById("btnChooseProj").style.borderColor="var(--border)";
+  document.getElementById("btnChooseProj").style.color="var(--text1)";
+  document.getElementById("manualProject").value="";
+}
+function onProjSelectChange(val){
+  document.getElementById("manualProject").value=val;
+  manualFillRate();
+}
+function onProjInputChange(val){
+  var v=val.trim();
+  document.getElementById("manualProject").value=v;
+  var alertEl=document.getElementById("manualProjNewAlert");
+  if(v && _projects.indexOf(v)<0){
+    alertEl.style.display="block";
+    document.getElementById("manualProject").value=""; // חסום עד שמוסיפים
+  } else {
+    alertEl.style.display="none";
+  }
+  manualFillRate();
+}
+function addProjFromManual(){
+  var v=document.getElementById("manualProjInput").value.trim();
+  if(!v) return;
+  addProjectToList(v);
+  document.getElementById("manualProjNewAlert").style.display="none";
+  document.getElementById("manualProject").value=v;
+  // עדכן את ה-select גם
+  var sel=document.getElementById("manualProjSelect");
+  if(sel) sel.innerHTML+="<option value='"+v+"'>"+v+"</option>";
+  manualFillRate();
+  showToast(v+" נוסף ✅");
+}
 function loadManualSelects() {
   document.getElementById("manualDate").value = new Date().toISOString().split("T")[0];
   // מלא datalist פרויקטים
-  var dl = document.getElementById("manualProjectsList");
-  if (dl) {
-    dl.innerHTML = "";
-    var seen = {};
-    rates.forEach(function(r){ if(r.project&&!seen[r.project]){seen[r.project]=1; dl.innerHTML+="<option value='"+r.project+"'>";} });
-    apiCall('getProjectsList', null, function(projs){
-      projs.forEach(function(p){ if(!seen[p]){seen[p]=1; dl.innerHTML+="<option value='"+p+"'>";} });
-    });
+  var sel = document.getElementById("manualProjSelect");
+  if (sel) {
+    sel.innerHTML = "<option value=''>בחר פרויקט...</option>";
+    _projects.forEach(function(p){ if(p) sel.innerHTML+="<option value='"+p+"'>"+p+"</option>"; });
   }
   apiCall('getWorkersList', null, function(workers){
     var sel = document.getElementById("manualName");
@@ -994,6 +1049,13 @@ function doManualEntry() {
       showToast(name+" נשמר ✅");
       document.getElementById("manualName").value="";
       document.getElementById("manualProject").value="";
+      document.getElementById("manualProjInput") && (document.getElementById("manualProjInput").value="");
+      document.getElementById("manualProjSelect") && (document.getElementById("manualProjSelect").value="");
+      document.getElementById("manualProjNewAlert") && (document.getElementById("manualProjNewAlert").style.display="none");
+      document.getElementById("manualProjSelect") && (document.getElementById("manualProjSelect").style.display="none");
+      document.getElementById("manualProjInputWrap") && (document.getElementById("manualProjInputWrap").style.display="none");
+      document.getElementById("btnChooseProj") && (document.getElementById("btnChooseProj").style.borderColor="var(--border)");
+      document.getElementById("btnTypeProj") && (document.getElementById("btnTypeProj").style.borderColor="var(--border)");
       document.getElementById("manualStart").value="";
       document.getElementById("manualEnd").value="";
       document.getElementById("manualHourlyRate").value="";
