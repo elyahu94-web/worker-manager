@@ -641,7 +641,6 @@ function showToast(m, c) {
 
 // ===== RATES =====
 function getRate(name, proj) {
-  // חיפוש מדויק שם+פרויקט
   for (var i = 0; i < rates.length; i++) {
     var r = rates[i];
     if (r.name === name.trim() && r.project === proj.trim()) {
@@ -649,7 +648,6 @@ function getRate(name, proj) {
       return r.amount || "";
     }
   }
-  // fallback — קח סכום מהפרויקט הרגיל של העובד
   for (var i = 0; i < rates.length; i++) {
     var r = rates[i];
     if (r.name === name.trim()) {
@@ -699,9 +697,20 @@ function renderRates() {
       html += "<input type='number' value='"+(r.amount||0)+"' onchange='rates["+i+"].amount=this.value' placeholder='₪/יום' style='flex:1;min-width:65px'>";
     }
     html += badge;
+    html += "<button onclick='addProjectToWorker(\""+r.name+"\")' title='הוסף פרויקט נוסף' style='background:rgba(79,142,247,.15);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:.8rem;cursor:pointer;white-space:nowrap'>＋ פרויקט</button>";
     html += "</div>";
   });
   el.innerHTML = html;
+}
+
+function addProjectToWorker(workerName) {
+  document.getElementById("nwName").value = workerName;
+  document.getElementById("nwProj").value = "";
+  document.getElementById("nwAmt").value = "";
+  document.getElementById("nwHourly").value = "";
+  document.getElementById("nwProj").focus();
+  document.getElementById("nwName").scrollIntoView({behavior:"smooth", block:"center"});
+  showToast("הוסף פרויקט נוסף ל"+workerName, "var(--accent)");
 }
 
 function addRate() {
@@ -962,6 +971,19 @@ function findClosest(name) {
   });
   return bestScore>=0.6?best:null;
 }
+function findClosestProject(proj) {
+  var known={};
+  rates.forEach(function(r){ if(r.project) known[r.project]=1; });
+  var knownProjs=Object.keys(known);
+  if(knownProjs.indexOf(proj)>=0) return null; // מדויק — אין צורך
+  var best=null,bestScore=0;
+  knownProjs.forEach(function(p){
+    var dist=levenshtein(proj,p);
+    var score=(Math.max(proj.length,p.length)-dist)/Math.max(proj.length,p.length);
+    if(score>bestScore){bestScore=score;best=p;}
+  });
+  return bestScore>=0.6?best:null;
+}
 
 function parseList() {
   var raw=document.getElementById("rawText").value.trim();
@@ -987,6 +1009,10 @@ function parseList() {
       var pm=line.match(/[\(\uFF08]([^\)\uFF09]+)[\)\uFF09]/);
       if(pm){proj=pm[1].trim();line=line.replace(pm[0],"").trim();}
       if(!proj) errors.push("שורה \""+line.trim()+"\": חסר פרויקט (בסוגריים)");
+      if(proj){
+        var closestProj=findClosestProject(proj);
+        if(closestProj) errors.push("פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+closestProj+"\"? <button class='btn-add-inline' style='background:rgba(52,211,153,.2);color:var(--green);border-color:var(--green)' onclick='acceptProjectSuggestion(\""+proj+"\",\""+closestProj+"\")'>✅ כן</button>");
+      }
       var hasSep=line.indexOf(",")>=0||line.indexOf("\u060C")>=0||line.indexOf("\u061B")>=0;
       if(!hasSep&&line.split(" ").filter(Boolean).length>=2){errors.push("שורה \""+line+"\": חסר פסיק בין שמות");return;}
       var names=line.split(/[,\u060C\u061B]/).map(function(n){return n.trim();}).filter(Boolean);
@@ -1209,6 +1235,7 @@ function saveNewEmployee() {
   }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
 }
 function acceptSuggestion(wrong,correct){ var ta=document.getElementById("rawText"); ta.value=ta.value.replace(new RegExp(wrong,"g"),correct); parseList(); }
+function acceptProjectSuggestion(wrong,correct){ var ta=document.getElementById("rawText"); ta.value=ta.value.replace(new RegExp(wrong.replace(/[()]/g,"\\$&"),"g"),correct); parseList(); }
 
 // ===== מפרעות =====
 function loadMifraotTab(){
