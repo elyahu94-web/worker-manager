@@ -302,6 +302,7 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
   <div class="tabs">
     <button class="tab on" id="tab0" onclick="showTab(0)">📥 ייבוא</button>
     <button class="tab" id="tab1" onclick="showTab(1)">👷 עובדים</button>
+    <button class="tab" id="tab5" onclick="showTab(5)">🏗️ פרויקטים</button>
     <button class="tab" id="tab4" onclick="showTab(4)">💸 מפרעות</button>
     <button class="tab" id="tab2" onclick="showTab(2)">📄 דוח מזמין</button>
     <button class="tab" id="tab3" onclick="showTab(3)">💵 משכורות</button>
@@ -529,6 +530,18 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
     </div>
   </div>
 
+  <!-- TAB 5 — פרויקטים -->
+  <div id="tabC5" style="display:none">
+    <div class="crd">
+      <h2>🏗️ פרויקטים</h2>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input id="newProjName" placeholder="שם פרויקט חדש..." class="inp" style="flex:1">
+        <button onclick="addProjectToList()" style="padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:1.1rem;white-space:nowrap">➕ הוסף</button>
+      </div>
+      <div id="projectsListDisplay"></div>
+    </div>
+  </div>
+
 </div><!-- /con -->
 
 <div class="toast" id="tst"></div>
@@ -615,11 +628,11 @@ function apiCall(action, payload, onSuccess, onError) {
 // ===== TABS =====
 function showTab(n) {
   if (n === 1) loadRates();
-
   if (n === 2) loadReportData();
   if (n === 3) loadSalaryData();
   if (n === 4) loadMifraotTab();
-  [0,1,2,3,4].forEach(function(i) {
+  if (n === 5) renderProjectsTab();
+  [0,1,2,3,4,5].forEach(function(i) {
     var c = document.getElementById("tabC"+i);
     var b = document.getElementById("tab"+i);
     if(c) c.style.display = i===n ? "block" : "none";
@@ -731,6 +744,66 @@ function loadRates() {
   });
 }
 loadRates();
+
+// ===== פרויקטים =====
+var _projects = [];
+
+function loadProjectsList(cb) {
+  apiCall('getProjectsList', null, function(projs){
+    var seen = {};
+    _projects = [];
+    (projs||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
+    _knownProjects.forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
+    _projects.sort();
+    if(cb) cb();
+  });
+}
+
+function renderProjectsTab() {
+  loadProjectsList(function(){
+    var el = document.getElementById("projectsListDisplay");
+    if(!el) return;
+    if(!_projects.length){
+      el.innerHTML = "<div class='loading'>אין פרויקטים עדיין</div>";
+      return;
+    }
+    var html = "";
+    _projects.forEach(function(p, i){
+      html += "<div class='rrow'><span style='flex:1;font-size:.9rem;font-weight:600'>"+p+"</span>";
+      html += "<button onclick='removeProject("+i+")' class='del'>✖</button></div>";
+    });
+    el.innerHTML = html;
+  });
+}
+
+function addProjectToList() {
+  var inp = document.getElementById("newProjName");
+  var name = inp.value.trim();
+  if(!name){ showToast("הכנס שם פרויקט","var(--orange)"); return; }
+  if(_projects.indexOf(name)>=0){ showToast("פרויקט כבר קיים","var(--orange)"); return; }
+  _projects.push(name);
+  _projects.sort();
+  _knownProjects = _projects.slice();
+  inp.value = "";
+  renderProjectsTab();
+  showToast(name+" נוסף ✅");
+}
+
+function removeProject(i) {
+  if(!confirm("למחוק פרויקט \""+_projects[i]+"\"?")) return;
+  _projects.splice(i,1);
+  _knownProjects = _projects.slice();
+  renderProjectsTab();
+}
+
+function autoAddProject(projName) {
+  if(!projName) return;
+  if(_projects.indexOf(projName)<0){
+    _projects.push(projName);
+    _projects.sort();
+    _knownProjects = _projects.slice();
+  }
+}
 
 function refreshProjectsList() {
   var dl = document.getElementById("projectsList");
@@ -1040,6 +1113,7 @@ function parseList() {
           else errors.push("שם \""+nm+"\": לא קיים <button class='btn-add-inline' onclick='openEmpModal(\""+nm+"\")'>➕ הוסף</button>");
         }
         parsedRows.push({name:nm,project:proj,date:block.date,amount:getRate(nm,proj),auto:getRate(nm,proj)!==""});
+        if(proj) autoAddProject(proj);
       });
     });
   });
