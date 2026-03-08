@@ -724,7 +724,7 @@ function saveRates() {
 function loadRates() {
   apiCall('getWorkerRates', null, function(data){
     rates = data || [];
-    renderRates(); loadManualSelects(); refreshProjectsList();
+    renderRates(); loadManualSelects(); loadMifraotTab(); refreshProjectsList();
   });
 }
 loadRates();
@@ -1195,21 +1195,11 @@ function saveNewEmployee() {
 function acceptSuggestion(wrong,correct){ var ta=document.getElementById("rawText"); ta.value=ta.value.replace(new RegExp(wrong,"g"),correct); parseList(); }
 
 // ===== מפרעות =====
-function _fillMifraDropdowns(){
-  var sel1=document.getElementById("mifraName"),sel2=document.getElementById("mifraReportWorker");
-  sel1.innerHTML="<option value=\'\'>בחר עובד...</option>"; sel2.innerHTML="<option value=\'\'>כל העובדים</option>";
-  var seen={};
-  rates.forEach(function(r){ if(!seen[r.name]){seen[r.name]=1; sel1.innerHTML+="<option value=\'"+r.name+"\'>"+r.name+"</option>"; sel2.innerHTML+="<option value=\'"+r.name+"\'>"+r.name+"</option>";} });
-}
 function loadMifraotTab(){
-  if(!rates || rates.length===0){
-    apiCall('getWorkerRates', null, function(data){
-      rates=data||[];
-      _fillMifraDropdowns();
-    });
-  } else {
-    _fillMifraDropdowns();
-  }
+  var sel1=document.getElementById("mifraName"),sel2=document.getElementById("mifraReportWorker");
+  sel1.innerHTML="<option value=''>בחר עובד...</option>"; sel2.innerHTML="<option value=''>כל העובדים</option>";
+  var seen={};
+  rates.forEach(function(r){ if(!seen[r.name]){seen[r.name]=1; sel1.innerHTML+="<option value='"+r.name+"'>"+r.name+"</option>"; sel2.innerHTML+="<option value='"+r.name+"'>"+r.name+"</option>";} });
   document.getElementById("mifraDate").value=new Date().toISOString().split("T")[0];
 
   // חודשים — משתי מקורות: נוכחות + מפרעות
