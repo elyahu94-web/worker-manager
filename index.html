@@ -621,22 +621,14 @@ var heMonths = ["","ינואר","פברואר","מרץ","אפריל","מאי","�
 // ===== API CALL =====
 function apiCall(action, payload, onSuccess, onError) {
   var url = APPS_SCRIPT_URL;
-  if (!payload) {
-    fetch(url + '?action=' + action)
-      .then(function(r){ return r.json(); })
-      .then(function(d){ onSuccess(d.data !== undefined ? d.data : d); })
-      .catch(function(e){ if(onError) onError(e); });
-  } else {
-    var body = JSON.stringify({action: action, payload: payload});
-    fetch(url, {
-      method: 'POST',
-      headers: {'Content-Type': 'text/plain'},
-      body: body
-    })
-      .then(function(r){ return r.json(); })
-      .then(function(d){ onSuccess(d.data !== undefined ? d.data : d); })
-      .catch(function(e){ if(onError) onError(e); });
-  }
+  fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain'},
+    body: JSON.stringify({action: action, payload: payload || {}})
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d){ onSuccess(d.data !== undefined ? d.data : d); })
+    .catch(function(e){ if(onError) onError(e); else console.error(e); });
 }
 
 // ===== TABS =====
@@ -1631,15 +1623,15 @@ function loadSalaryData(){
   });
 }
 function loadEmailLog(callback){
-  apiCall('getEmailLog', null, function(log){
+  apiCall('getEmailLog', {}, function(log){
     _sentEmails = {};
     (log||[]).forEach(function(entry){
       var key = entry.worker + "_" + entry.month;
-      // שמור את הרשומה האחרונה לכל עובד+חודש
       _sentEmails[key] = { email: entry.email, time: entry.time, date: entry.date };
     });
+    console.log("לוג מיילים נטען:", JSON.stringify(_sentEmails));
     if(callback) callback();
-  }, function(){ if(callback) callback(); });
+  }, function(e){ console.log("שגיאה בטעינת לוג:", e); if(callback) callback(); });
 }
 
 function loadWorkersForMonth(month){
@@ -1908,6 +1900,7 @@ function updateEmailStatus(workerName, month){
 
 function confirmAndSend(email, workerName, month){
   var key = workerName + "_" + month;
+  console.log("confirmAndSend key:", key, "sentEmails:", JSON.stringify(_sentEmails));
   if(_sentEmails[key]){
     var s = _sentEmails[key];
     if(!confirm("מייל כבר נשלח ל-" + workerName + "\nבתאריך " + s.date + " בשעה " + s.time + ".\n\nלשלוח שוב?")) return;
