@@ -1354,6 +1354,12 @@ function removeRow(i){ parsedRows.splice(i,1); renderPreview(); }
 
 var pendingEntries={}, existingByDate={};
 function submitAll() {
+  var btn=document.getElementById("submitBtn");
+  btn.textContent="בודק..."; btn.disabled=true;
+  setTimeout(function(){ _doSubmitAll(); }, 30);
+}
+function _doSubmitAll() {
+  var btn=document.getElementById("submitBtn");
   var missing=[];
   for(var i=0;i<parsedRows.length;i++){
     var workerRec=null;
@@ -1363,7 +1369,7 @@ function submitAll() {
       if(!ts||!ts.value||!te||!te.value) missing.push(parsedRows[i].name);
     }
   }
-  if(missing.length>0){showToast("חסרות שעות עבור: "+missing.join(", "),"var(--orange)");return;}
+  if(missing.length>0){showToast("חסרות שעות עבור: "+missing.join(", "),"var(--orange)");btn.textContent="✅ שלח הכל לשיטס";btn.disabled=false;return;}
   pendingEntries=[];
   for(var i=0;i<parsedRows.length;i++){
     var amt=document.getElementById("a"+i).value;
@@ -1432,7 +1438,7 @@ function submitAllAnyway(){ closeDupModal(); doActualSubmit(pendingEntries); }
 
 function doActualSubmit(entries) {
   var btn=document.getElementById("submitBtn");
-  btn.textContent="שומר..."; btn.disabled=true;
+  btn.textContent="שומר...";
   setTimeout(function(){
   apiCall('addBulkEntries', {entries:entries}, function(){
     showToast("נשמרו "+entries.length+" רשומות ✅");
