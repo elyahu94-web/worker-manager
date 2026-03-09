@@ -621,14 +621,21 @@ var heMonths = ["","ינואר","פברואר","מרץ","אפריל","מאי","�
 // ===== API CALL =====
 function apiCall(action, payload, onSuccess, onError) {
   var url = APPS_SCRIPT_URL;
-  fetch(url, {
-    method: 'POST',
-    headers: {'Content-Type': 'text/plain'},
-    body: JSON.stringify({action: action, payload: payload || {}})
-  })
-    .then(function(r){ return r.json(); })
-    .then(function(d){ onSuccess(d.data !== undefined ? d.data : d); })
-    .catch(function(e){ if(onError) onError(e); else console.error(e); });
+  if (!payload) {
+    fetch(url + '?action=' + action)
+      .then(function(r){ return r.json(); })
+      .then(function(d){ onSuccess(d.data !== undefined ? d.data : d); })
+      .catch(function(e){ if(onError) onError(e); else console.error(e); });
+  } else {
+    fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({action: action, payload: payload})
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ onSuccess(d.data !== undefined ? d.data : d); })
+      .catch(function(e){ if(onError) onError(e); else console.error(e); });
+  }
 }
 
 // ===== TABS =====
@@ -1623,7 +1630,7 @@ function loadSalaryData(){
   });
 }
 function loadEmailLog(callback){
-  apiCall('getEmailLog', {}, function(log){
+  apiCall('getEmailLog', {dummy:1}, function(log){
     _sentEmails = {};
     (log||[]).forEach(function(entry){
       var key = entry.worker + "_" + entry.month;
