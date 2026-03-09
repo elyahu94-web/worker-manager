@@ -1,4 +1,4 @@
-var CACHE = 'worker-manager-v49';
+var CACHE = 'worker-manager-v50';
 var ASSETS = ['./', './index.html', './manifest.json', './logo-header.png'];
 
 self.addEventListener('install', function(e) {
