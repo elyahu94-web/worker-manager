@@ -704,15 +704,18 @@ function renderRates() {
     var badge = isH
       ? "<span class='badge-yellow'>🕐 שעתי</span>"
       : "<span class='badge-green'>📅 יומי</span>";
+    var hasDetails = r.email||r.phone||r.idNum||r.bankNum;
+    var detailsDot = hasDetails ? "<span style='width:7px;height:7px;background:var(--green);border-radius:50%;display:inline-block;margin-right:2px'></span>" : "";
     html += "<div class='rrow'>";
     html += "<input type='checkbox' class='workerChk' data-name='"+r.name+"' onchange='updateDeleteBtn()' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0'>";
-    html += "<input value='"+r.name+"' onchange='rates["+i+"].name=this.value' placeholder='שם' style='flex:3;min-width:120px'>";
+    html += "<input value='"+r.name+"' onchange='rates["+i+"].name=this.value' placeholder='שם' style='flex:3;min-width:100px'>";
     if (isH) {
-      html += "<input type='number' value='"+(r.hourlyRate||0)+"' onchange='rates["+i+"].hourlyRate=this.value' placeholder='₪/שעה' style='flex:1;min-width:65px'>";
+      html += "<input type='number' value='"+(r.hourlyRate||0)+"' onchange='rates["+i+"].hourlyRate=this.value' placeholder='₪/שעה' style='flex:1;min-width:60px'>";
     } else {
-      html += "<input type='number' value='"+(r.amount||0)+"' onchange='rates["+i+"].amount=this.value' placeholder='₪/יום' style='flex:1;min-width:65px'>";
+      html += "<input type='number' value='"+(r.amount||0)+"' onchange='rates["+i+"].amount=this.value' placeholder='₪/יום' style='flex:1;min-width:60px'>";
     }
     html += badge;
+    html += "<button onclick='openWorkerCard("+i+")' title='כרטיס עובד' style='background:rgba(79,142,247,.15);color:var(--accent);border:1px solid rgba(79,142,247,.3);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:.8rem;white-space:nowrap'>"+detailsDot+"👤</button>";
     html += "</div>";
   });
   el.innerHTML = html;
@@ -1806,5 +1809,48 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+
+<!-- ===== כרטיס עובד modal ===== -->
+<div id="workerCardModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;overflow-y:auto;padding:20px" onclick="if(event.target===this)closeWorkerCard()">
+  <div style="background:var(--bg2);border-radius:16px;max-width:460px;margin:0 auto;padding:24px;position:relative;border:1px solid var(--border)">
+    <button onclick="closeWorkerCard()" style="position:absolute;top:12px;left:12px;background:none;border:none;color:var(--text2);font-size:1.3rem;cursor:pointer">✕</button>
+    <h3 id="wcTitle" style="text-align:center;margin-bottom:20px;color:var(--accent)">👤 כרטיס עובד</h3>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label class="lbl">📧 אימייל</label>
+        <input id="wcEmail" type="email" placeholder="example@gmail.com" class="inp">
+      </div>
+      <div>
+        <label class="lbl">📱 טלפון</label>
+        <input id="wcPhone" type="tel" placeholder="05X-XXXXXXX" class="inp">
+      </div>
+      <div>
+        <label class="lbl">🪪 תעודת זהות</label>
+        <input id="wcId" type="text" placeholder="מספר ת.ז." class="inp">
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:14px;border:1px solid var(--border)">
+        <div style="font-weight:700;margin-bottom:10px;color:var(--text2);font-size:.85rem">🏦 פרטי בנק</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <div style="flex:1">
+            <label class="lbl" style="font-size:.75rem">בנק</label>
+            <input id="wcBank" type="text" placeholder="לאומי / פועלים..." class="inp" style="font-size:.85rem">
+          </div>
+          <div style="flex:1">
+            <label class="lbl" style="font-size:.75rem">סניף</label>
+            <input id="wcBranch" type="text" placeholder="מספר סניף" class="inp" style="font-size:.85rem">
+          </div>
+        </div>
+        <div>
+          <label class="lbl" style="font-size:.75rem">מספר חשבון</label>
+          <input id="wcBankNum" type="text" placeholder="מספר חשבון" class="inp" style="font-size:.85rem">
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button onclick="saveWorkerCard()" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:10px;padding:12px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial">💾 שמור</button>
+      <button id="wcEmailBtn" onclick="sendWorkerPDF()" style="flex:1;background:rgba(79,142,247,.2);color:var(--accent);border:1px solid var(--accent);border-radius:10px;padding:12px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial">📧 שלח משכורת למייל</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
