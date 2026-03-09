@@ -1709,11 +1709,17 @@ function runNextSalary(month,btn){
       var attachBtn = '<label title="צרף תלוש" style="padding:6px 10px;background:rgba(52,211,153,.1);color:var(--green);border:1px solid var(--green);border-radius:8px;font-size:.82rem;cursor:pointer;display:inline-flex;align-items:center" id="attachLbl_'+w+'">'
         + '📎<input type="file" accept=".pdf" style="display:none" onchange="attachPayslip(this,\''+safeW+'\')"></label>';
       var attachStatus = '<span id="attachStatus_'+w+'" style="font-size:.75rem;color:var(--green);margin-right:2px"></span>';
-      btns+='<span style="display:inline-flex;align-items:center;gap:3px;margin:2px;flex-wrap:wrap">'
-        +'<button class="btn-add-inline" style="padding:6px 12px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:.82rem" data-sheet="'+sheetName+'" data-file="'+fileName+'" onclick="downloadSalaryPDF(this.dataset.sheet,this.dataset.file)">📄 '+w+'</button>'
-        +attachBtn+attachStatus+emailBtn+'</span>';
+      btns+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:8px">'
+        +'<span style="font-weight:600;font-size:.95rem;color:var(--text1)">'+w+'</span>'
+        +'<div style="display:flex;align-items:center;gap:6px">'
+        +attachStatus
+        +'<button style="padding:6px 12px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:.82rem;cursor:pointer" data-sheet="'+sheetName+'" data-file="'+fileName+'" onclick="downloadSalaryPDF(this.dataset.sheet,this.dataset.file)">📄 הורד</button>'
+        +attachBtn
+        +emailBtn
+        +'</div>'
+        +'</div>';
     });
-    el.innerHTML="<div style='margin-bottom:8px'>✅ הופקו "+_salDone.length+" דוחות:</div><div>"+btns+"</div>";
+    el.innerHTML="<div style='margin-bottom:12px;font-weight:700;color:var(--green)'>✅ הופקו "+_salDone.length+" דוחות:</div>"+btns;
     showToast("כל הדוחות הופקו ✅");
     checkExistingReports(month); return;
   }
