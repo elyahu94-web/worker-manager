@@ -1630,6 +1630,18 @@ function loadSalaryData(){
     if(months.length){sel.value=months[0];loadWorkersForMonth(months[0]);}
   });
 }
+function loadEmailLog(callback){
+  apiCall('getEmailLog', null, function(log){
+    _sentEmails = {};
+    (log||[]).forEach(function(entry){
+      var key = entry.worker + "_" + entry.month;
+      // שמור את הרשומה האחרונה לכל עובד+חודש
+      _sentEmails[key] = { email: entry.email, time: entry.time, date: entry.date };
+    });
+    if(callback) callback();
+  }, function(){ if(callback) callback(); });
+}
+
 function loadWorkersForMonth(month){
   if(!month) return;
   var box = document.getElementById("workerCheckboxes");
@@ -1639,6 +1651,13 @@ function loadWorkersForMonth(month){
   apiCall('getWorkersByMonth', {month:month}, function(workers){
     _salWorkersList = workers || [];
     renderWorkerCheckboxes();
+    // לאחר רינדור — טען לוג מיילים ועדכן סטטוסים
+    loadEmailLog(function(){
+      _salWorkersList.forEach(function(w){
+        var key = w + "_" + month;
+        if(_sentEmails[key]) updateEmailStatus(w, month);
+      });
+    });
   }, function(){
     box.innerHTML = "<div style='color:var(--red);padding:10px;font-size:.85rem'>\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d8\u05e2\u05d9\u05e0\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd</div>";
   });
@@ -1859,8 +1878,10 @@ function sendSalaryEmail(email, workerName, month){
   if(payslip) payload.payslip = payslip;
   apiCall('sendSalaryEmail', payload, function(res){
     if(res === "נשלח ✅"){
-      _sentEmails[workerName] = { email: email, time: new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}) };
-      updateEmailStatus(workerName);
+      var _now = new Date();
+      var _key = workerName + "_" + month;
+      _sentEmails[_key] = { email: email, time: _now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}), date: _now.toLocaleDateString('he-IL') };
+      updateEmailStatus(workerName, month);
       showToast("המייל נשלח ל-" + email + " ✅", "var(--green)");
     } else {
       showToast(res || "שגיאה בשליחה", "var(--red)");
@@ -1870,18 +1891,22 @@ function sendSalaryEmail(email, workerName, month){
   });
 }
 
-function updateEmailStatus(workerName){
-  var s = _sentEmails[workerName];
+function updateEmailStatus(workerName, month){
+  if(!month) month = document.getElementById("salMonth").value;
+  var key = workerName + "_" + month;
+  var s = _sentEmails[key];
   if(!s) return;
   var el = document.getElementById("emailStatus_" + workerName);
-  if(el) el.innerHTML = '<span style="color:var(--accent)">✅ נשלח ב-' + s.time + ' אל ' + s.email + '</span>';
+  if(el) el.innerHTML = '<span style="color:var(--accent)">✅ נשלח ב-' + s.date + ' ' + s.time + ' אל ' + s.email + '</span>';
   var btn = document.getElementById("emailBtn_" + workerName);
-  if(btn){ btn.style.background="rgba(79,142,247,.3)"; btn.style.borderColor="var(--accent)"; btn.title="נשלח — לחץ לשליחה חוזרת"; }
+  if(btn){ btn.style.background="rgba(79,142,247,.3)"; btn.title="נשלח — לחץ לשליחה חוזרת"; }
 }
 
 function confirmAndSend(email, workerName, month){
-  if(_sentEmails[workerName]){
-    if(!confirm("מייל כבר נשלח ל-" + workerName + " ב-" + _sentEmails[workerName].time + ".\nלשלוח שוב?")) return;
+  var key = workerName + "_" + month;
+  if(_sentEmails[key]){
+    var s = _sentEmails[key];
+    if(!confirm("מייל כבר נשלח ל-" + workerName + "\nבתאריך " + s.date + " בשעה " + s.time + ".\n\nלשלוח שוב?")) return;
   }
   sendSalaryEmail(email, workerName, month);
 }
