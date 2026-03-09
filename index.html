@@ -1625,8 +1625,9 @@ function doMifraReport(){
 // ===== דוחות =====
 var _salWorkersList=[];
 function loadSalaryData(){
+  var sel=document.getElementById("salMonth");
+  sel.innerHTML="<option value=''>⏳ טוען חודשים...</option>";
   apiCall('getMonthsList', null, function(months){
-    var sel=document.getElementById("salMonth");
     sel.innerHTML="<option value=''>בחר חודש</option>";
     months.forEach(function(m){var p=m.split("-");sel.innerHTML+="<option value='"+m+"'>"+heMonths[parseInt(p[1])]+" "+p[0]+"</option>";});
     if(months.length){sel.value=months[0];loadWorkersForMonth(months[0]);}
