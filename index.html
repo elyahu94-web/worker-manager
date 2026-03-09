@@ -1637,6 +1637,7 @@ function loadEmailLog(callback){
       _sentEmails[key] = { email: entry.email, time: entry.time, date: entry.date };
     });
     console.log("לוג מיילים נטען:", JSON.stringify(_sentEmails));
+    console.log("keys:", Object.keys(_sentEmails));
     if(callback) callback();
   }, function(e){ console.log("שגיאה בטעינת לוג:", e); if(callback) callback(); });
 }
@@ -1917,7 +1918,7 @@ function updateEmailStatus(workerName, month){
 
 function confirmAndSend(email, workerName, month){
   var key = workerName + "_" + month;
-  console.log("confirmAndSend key:", key, "sentEmails:", JSON.stringify(_sentEmails));
+  console.log("confirmAndSend - key:", JSON.stringify(key), "exists:", !!_sentEmails[key], "all keys:", JSON.stringify(Object.keys(_sentEmails)));
   if(_sentEmails[key]){
     var s = _sentEmails[key];
     if(!confirm("מייל כבר נשלח ל-" + workerName + "\nבתאריך " + s.date + " בשעה " + s.time + ".\n\nלשלוח שוב?")) return;
