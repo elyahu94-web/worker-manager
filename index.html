@@ -529,7 +529,7 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
       <p class="hint">בחר חודש וסמן עובדים — כל עובד יקבל גיליון נפרד</p><br>
       <div class="fg">
         <label>בחר חודש</label>
-        <select id="salMonth" class="sel" onchange="renderWorkerCheckboxes()"></select>
+        <select id="salMonth" class="sel" onchange="loadWorkersForMonth(this.value)"></select>
       </div>
       <div class="fg" style="margin-top:12px">
         <label style="display:flex;justify-content:space-between;align-items:center">
@@ -1623,14 +1623,21 @@ function loadSalaryData(){
     var sel=document.getElementById("salMonth");
     sel.innerHTML="<option value=''>בחר חודש</option>";
     months.forEach(function(m){var p=m.split("-");sel.innerHTML+="<option value='"+m+"'>"+heMonths[parseInt(p[1])]+" "+p[0]+"</option>";});
-    if(months.length){sel.value=months[0];renderWorkerCheckboxes();}
+    if(months.length){sel.value=months[0];loadWorkersForMonth(months[0]);}
   });
-  apiCall('getWorkersList', null, function(workers){ _salWorkersList=workers; renderWorkerCheckboxes(); });
+}
+function loadWorkersForMonth(month){
+  if(!month) return;
+  // שלוף רק עובדים שעבדו באותו חודש
+  apiCall('getWorkersByMonth', {month:month}, function(workers){
+    _salWorkersList = workers || [];
+    renderWorkerCheckboxes();
+  });
 }
 function renderWorkerCheckboxes(){
   var month=document.getElementById("salMonth").value;
   var box=document.getElementById("workerCheckboxes");
-  if(!_salWorkersList.length){box.innerHTML="<div class='loading'>אין עובדים</div>";return;}
+  if(!_salWorkersList.length){box.innerHTML="<div class='loading'>אין עובדים לחודש זה</div>";return;}
   var html="";
   _salWorkersList.forEach(function(w){
     html+="<label class='worker-chk-label'><input type='checkbox' class='salChk' data-name='"+w+"' data-sheet='משכורת "+w+" "+month+"'><span>"+w+"</span></label>";
