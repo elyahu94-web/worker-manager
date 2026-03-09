@@ -289,6 +289,7 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
   table{font-size:.76rem}
   th,td{padding:6px 7px}
 }
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -1631,10 +1632,15 @@ function loadSalaryData(){
 }
 function loadWorkersForMonth(month){
   if(!month) return;
-  // שלוף רק עובדים שעבדו באותו חודש
+  var box = document.getElementById("workerCheckboxes");
+  box.innerHTML = "<div style='display:flex;align-items:center;gap:10px;padding:12px;color:var(--text2);font-size:.85rem'>"
+    + "<div style='width:18px;height:18px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0'></div>"
+    + "\u05d8\u05d5\u05e2\u05df \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05dc\u05d7\u05d5\u05d3\u05e9 " + month + "...</div>";
   apiCall('getWorkersByMonth', {month:month}, function(workers){
     _salWorkersList = workers || [];
     renderWorkerCheckboxes();
+  }, function(){
+    box.innerHTML = "<div style='color:var(--red);padding:10px;font-size:.85rem'>\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d8\u05e2\u05d9\u05e0\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd</div>";
   });
 }
 function renderWorkerCheckboxes(){
@@ -1806,22 +1812,16 @@ function confirmDeleteWorker(){
 var _wcIndex = -1;
 
 function sendSalaryEmail(email, workerName, month){
-  var sheetName = workerName + "_" + month;
-  var subject = encodeURIComponent("משכורת " + workerName + " - " + month);
-  var body = encodeURIComponent("שלום " + workerName + ",\nמצורפת משכורת לחודש " + month + ".\n\nבברכה");
-  apiCall('getSheetGid', {sheetName: sheetName}, function(gid){
-    if(!gid){ showToast("לא נמצא דוח — הכן דוח תחילה","var(--red)"); return; }
-    var ssId = "1qfq6n2a5CINMEq4IOWG-nr_gf6-27pD9RJRDzCGN6Nk";
-    var pdfUrl = "https://docs.google.com/spreadsheets/d/"+ssId+"/export?format=pdf&gid="+gid
-      +"&portrait=true&fitw=true&sheetnames=false&pagenums=false&gridlines=false"
-      +"&top_margin=0.5&bottom_margin=0.5&left_margin=0.5&right_margin=0.5";
-    var a = document.createElement("a");
-    a.href=pdfUrl; a.download=workerName+"_"+month+".pdf"; a.target="_blank";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function(){
-      window.open("https://mail.google.com/mail/?view=cm&to="+encodeURIComponent(email)+"&su="+subject+"&body="+body,"_blank");
-    },1000);
-    showToast("PDF יורד + Gmail נפתח 📧");
+  if(!email){ showToast("אין אימייל לעובד זה","var(--red)"); return; }
+  showToast("שולח מייל ל-" + workerName + "...", "var(--accent)");
+  apiCall('sendSalaryEmail', {workerName: workerName, month: month, email: email}, function(res){
+    if(res === "נשלח ✅"){
+      showToast("המייל נשלח ל-" + email + " ✅", "var(--green)");
+    } else {
+      showToast(res || "שגיאה בשליחה", "var(--red)");
+    }
+  }, function(e){
+    showToast("שגיאה: " + (e.message||""), "var(--red)");
   });
 }
 
