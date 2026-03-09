@@ -1424,7 +1424,7 @@ function checkDuplicates() {
 }
 
 function formatDate(iso){ if(!iso) return ""; var p=iso.split("-"); return p[2]+"/"+p[1]+"/"+p[0]; }
-function closeDupModal(){ document.getElementById("dupModal").classList.remove("on"); }
+function closeDupModal(){ document.getElementById("dupModal").classList.remove("on"); var btn=document.getElementById("submitBtn"); btn.textContent="✅ שלח הכל לשיטס"; btn.disabled=false; }
 function submitOnlyNew(){
   closeDupModal();
   var newOnly=pendingEntries.filter(function(e){
