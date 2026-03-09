@@ -1746,6 +1746,10 @@ function runNextSalary(month,btn){
     });
     el.innerHTML="<div style='margin-bottom:12px;font-weight:700;color:var(--green)'>✅ הופקו "+_salDone.length+" דוחות:</div>"+btns;
     showToast("כל הדוחות הופקו ✅");
+    // טען לוג מיילים ועדכן סטטוסים
+    loadEmailLog(function(){
+      _salDone.forEach(function(w){ updateEmailStatus(w, month); });
+    });
     checkExistingReports(month); return;
   }
   var worker=_salPending.shift();
