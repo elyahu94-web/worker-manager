@@ -1703,9 +1703,7 @@ function runNextSalary(month,btn){
       var fileName=w+"_"+month+".pdf";
       var wEmail = (function(n){ for(var i=0;i<rates.length;i++) if(rates[i].name===n) return rates[i].email||''; return ''; })(w);
       var safeW = w.replace(/'/g,"\\'");
-      var emailBtn = wEmail
-        ? '<button title="שלח מייל" style="padding:6px 10px;background:rgba(79,142,247,.1);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:.82rem;cursor:pointer" data-email="'+wEmail+'" data-name="'+w+'" data-month="'+month+'" onclick="sendSalaryEmail(this.dataset.email,this.dataset.name,this.dataset.month)">📧</button>'
-        : '';
+      var emailBtn = ''; // מטופל inline
       var attachBtn = '<label title="צרף תלוש" style="padding:5px 11px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:7px;font-size:.8rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px" id="attachLbl_'+w+'">'
         + '📎 תלוש<input type="file" accept=".pdf" style="display:none" onchange="attachPayslip(this,\''+safeW+'\')"></label>';
       var attachStatus = '';
@@ -1716,14 +1714,15 @@ function runNextSalary(month,btn){
         +'<div style="display:flex;align-items:center;gap:6px">'
         +'<button style="padding:5px 11px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:7px;font-size:.8rem;cursor:pointer" data-sheet="'+sheetName+'" data-file="'+fileName+'" onclick="downloadSalaryPDF(this.dataset.sheet,this.dataset.file)" title="הורד דוח נוכחות">⬇️ דוח נוכחות</button>'
         +attachBtn
-        +emailBtn
+        +(wEmail ? '<button id="emailBtn_'+w+'" style="padding:5px 11px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:7px;font-size:.8rem;cursor:pointer" data-email="'+wEmail+'" data-name="'+w+'" data-month="'+month+'" onclick="confirmAndSend(this.dataset.email,this.dataset.name,this.dataset.month)" title="שלח מייל">📧</button>' : '')
         +'</div>'
         +'</div>'
         // שורה תחתונה: סטטוס קבצים
-        +'<div id="fileStatus_'+w+'" style="font-size:.75rem;color:var(--text2);display:flex;gap:8px">'
+        +'<div style="font-size:.75rem;color:var(--text2);display:flex;gap:12px;flex-wrap:wrap">'
         +'<span style="color:var(--accent)">📄 דוח נוכחות מוכן לשליחה</span>'
         +'<span id="attachStatus_'+w+'"></span>'
         +'</div>'
+        +'<div id="emailStatus_'+w+'" style="font-size:.75rem;margin-top:3px"></div>'
         +'</div>';
     });
     el.innerHTML="<div style='margin-bottom:12px;font-weight:700;color:var(--green)'>✅ הופקו "+_salDone.length+" דוחות:</div>"+btns;
@@ -1835,6 +1834,7 @@ var _wcIndex = -1;
 
 // אחסון תלושים מצורפים לפי שם עובד
 var _payslips = {};
+var _sentEmails = {};
 
 function attachPayslip(input, workerName){
   var file = input.files[0];
@@ -1859,6 +1859,8 @@ function sendSalaryEmail(email, workerName, month){
   if(payslip) payload.payslip = payslip;
   apiCall('sendSalaryEmail', payload, function(res){
     if(res === "נשלח ✅"){
+      _sentEmails[workerName] = { email: email, time: new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}) };
+      updateEmailStatus(workerName);
       showToast("המייל נשלח ל-" + email + " ✅", "var(--green)");
     } else {
       showToast(res || "שגיאה בשליחה", "var(--red)");
@@ -1866,6 +1868,22 @@ function sendSalaryEmail(email, workerName, month){
   }, function(e){
     showToast("שגיאה: " + (e.message||""), "var(--red)");
   });
+}
+
+function updateEmailStatus(workerName){
+  var s = _sentEmails[workerName];
+  if(!s) return;
+  var el = document.getElementById("emailStatus_" + workerName);
+  if(el) el.innerHTML = '<span style="color:var(--accent)">✅ נשלח ב-' + s.time + ' אל ' + s.email + '</span>';
+  var btn = document.getElementById("emailBtn_" + workerName);
+  if(btn){ btn.style.background="rgba(79,142,247,.3)"; btn.style.borderColor="var(--accent)"; btn.title="נשלח — לחץ לשליחה חוזרת"; }
+}
+
+function confirmAndSend(email, workerName, month){
+  if(_sentEmails[workerName]){
+    if(!confirm("מייל כבר נשלח ל-" + workerName + " ב-" + _sentEmails[workerName].time + ".\nלשלוח שוב?")) return;
+  }
+  sendSalaryEmail(email, workerName, month);
 }
 
 function openWorkerCard(i){
