@@ -1702,8 +1702,16 @@ function runNextSalary(month,btn){
       var sheetName=w+"_"+month;
       var fileName=w+"_"+month+".pdf";
       var wEmail = (function(n){ for(var i=0;i<rates.length;i++) if(rates[i].name===n) return rates[i].email||''; return ''; })(w);
-      var emailBtn = wEmail ? '<button style="margin:4px 0 4px 2px;padding:6px 10px;background:rgba(79,142,247,.1);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:.82rem;cursor:pointer" data-email="'+wEmail+'" data-name="'+w+'" data-month="'+month+'" onclick="sendSalaryEmail(this.dataset.email,this.dataset.name,this.dataset.month)">📧</button>' : '';
-      btns+='<span style="display:inline-flex;align-items:center;margin:2px"><button class="btn-add-inline" style="padding:6px 12px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:.82rem" data-sheet="'+sheetName+'" data-file="'+fileName+'" onclick="downloadSalaryPDF(this.dataset.sheet,this.dataset.file)">📄 '+w+'</button>'+emailBtn+'</span>';
+      var safeW = w.replace(/'/g,"\\'");
+      var emailBtn = wEmail
+        ? '<button title="שלח מייל" style="padding:6px 10px;background:rgba(79,142,247,.1);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:.82rem;cursor:pointer" data-email="'+wEmail+'" data-name="'+w+'" data-month="'+month+'" onclick="sendSalaryEmail(this.dataset.email,this.dataset.name,this.dataset.month)">📧</button>'
+        : '';
+      var attachBtn = '<label title="צרף תלוש" style="padding:6px 10px;background:rgba(52,211,153,.1);color:var(--green);border:1px solid var(--green);border-radius:8px;font-size:.82rem;cursor:pointer;display:inline-flex;align-items:center" id="attachLbl_'+w+'">'
+        + '📎<input type="file" accept=".pdf" style="display:none" onchange="attachPayslip(this,\''+safeW+'\')"></label>';
+      var attachStatus = '<span id="attachStatus_'+w+'" style="font-size:.75rem;color:var(--green);margin-right:2px"></span>';
+      btns+='<span style="display:inline-flex;align-items:center;gap:3px;margin:2px;flex-wrap:wrap">'
+        +'<button class="btn-add-inline" style="padding:6px 12px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:.82rem" data-sheet="'+sheetName+'" data-file="'+fileName+'" onclick="downloadSalaryPDF(this.dataset.sheet,this.dataset.file)">📄 '+w+'</button>'
+        +attachBtn+attachStatus+emailBtn+'</span>';
     });
     el.innerHTML="<div style='margin-bottom:8px'>✅ הופקו "+_salDone.length+" דוחות:</div><div>"+btns+"</div>";
     showToast("כל הדוחות הופקו ✅");
@@ -1811,10 +1819,32 @@ function confirmDeleteWorker(){
 // ===== כרטיס עובד =====
 var _wcIndex = -1;
 
+
+// אחסון תלושים מצורפים לפי שם עובד
+var _payslips = {};
+
+function attachPayslip(input, workerName){
+  var file = input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    _payslips[workerName] = { name: file.name, data: e.target.result };
+    var status = document.getElementById("attachStatus_" + workerName);
+    var lbl = document.getElementById("attachLbl_" + workerName);
+    if(status) status.textContent = "✅";
+    if(lbl) { lbl.title = file.name; lbl.style.background = "rgba(52,211,153,.25)"; }
+    showToast("תלוש צורף ל-" + workerName + " ✅", "var(--green)");
+  };
+  reader.readAsDataURL(file);
+}
+
 function sendSalaryEmail(email, workerName, month){
   if(!email){ showToast("אין אימייל לעובד זה","var(--red)"); return; }
   showToast("שולח מייל ל-" + workerName + "...", "var(--accent)");
-  apiCall('sendSalaryEmail', {workerName: workerName, month: month, email: email}, function(res){
+  var payslip = _payslips[workerName] || null;
+  var payload = {workerName: workerName, month: month, email: email};
+  if(payslip) payload.payslip = payslip;
+  apiCall('sendSalaryEmail', payload, function(res){
     if(res === "נשלח ✅"){
       showToast("המייל נשלח ל-" + email + " ✅", "var(--green)");
     } else {
