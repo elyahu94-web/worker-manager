@@ -1433,6 +1433,7 @@ function submitAllAnyway(){ closeDupModal(); doActualSubmit(pendingEntries); }
 function doActualSubmit(entries) {
   var btn=document.getElementById("submitBtn");
   btn.textContent="שומר..."; btn.disabled=true;
+  setTimeout(function(){
   apiCall('addBulkEntries', {entries:entries}, function(){
     showToast("נשמרו "+entries.length+" רשומות ✅");
     document.getElementById("previewCard").style.display="none";
@@ -1443,6 +1444,7 @@ function doActualSubmit(entries) {
     showToast(e.message||"שגיאה","var(--red)");
     btn.textContent="✅ שלח הכל לשיטס"; btn.disabled=false;
   });
+  }, 30);
 }
 
 function confirmWarnDates(){ document.getElementById("errorsBox").innerHTML=""; document.getElementById("submitBtn").disabled=false; showToast("ממשיך ✅"); }
