@@ -1498,10 +1498,14 @@ function acceptSuggestion(wrong,correct){
 // ===== מפרעות =====
 function loadMifraotTab(){
   var sel1=document.getElementById("mifraName"),sel2=document.getElementById("mifraReportWorker");
-  sel1.innerHTML="<option value=''>בחר עובד...</option>"; sel2.innerHTML="<option value=''>כל העובדים</option>";
+  sel1.innerHTML="<option value=''>⏳ טוען עובדים...</option>";
+  sel2.innerHTML="<option value=''>⏳ טוען עובדים...</option>";
+  var sel3=document.getElementById("mifraReportMonth");
+  sel3.innerHTML="<option value=''>⏳ טוען חודשים...</option>";
   var seen={};
-  // מילוי מרשימת העובדים הרשמית
   apiCall('getWorkersList', null, function(workers){
+    sel1.innerHTML="<option value=''>בחר עובד...</option>";
+    sel2.innerHTML="<option value=''>כל העובדים</option>";
     workers.forEach(function(w){
       if(!seen[w]){
         seen[w]=1;
@@ -1513,11 +1517,10 @@ function loadMifraotTab(){
   document.getElementById("mifraDate").value=new Date().toISOString().split("T")[0];
 
   // חודשים — משתי מקורות: נוכחות + מפרעות
-  var sel3=document.getElementById("mifraReportMonth");
-  sel3.innerHTML="<option value=''>בחר חודש...</option>";
   apiCall('getMonthsList', null, function(months1){
     apiCall('getMifraMonths', null, function(months2){
       // מיזוג ומיון
+      sel3.innerHTML="<option value=''>בחר חודש...</option>";
       var allMonths = {};
       (months1||[]).forEach(function(m){ allMonths[m]=1; });
       (months2||[]).forEach(function(m){ allMonths[m]=1; });
@@ -1801,6 +1804,8 @@ function downloadSalaryPDF(sheetName, fileName){
   });
 }
 function loadReportData(){
+  document.getElementById("selMonth").innerHTML="<option value=''>⏳ טוען...</option>";
+  document.getElementById("selProject").innerHTML="<option value=''>⏳ טוען...</option>";
   apiCall('getMonthsList', null, function(months){
     var sel=document.getElementById("selMonth");
     sel.innerHTML="<option value=''>בחר חודש</option>";
