@@ -1655,7 +1655,7 @@ function checkExistingReports(month){
       var name=chk.dataset.name;
       var label=chk.parentElement;
       var old=label.querySelector(".sal-badge"); if(old) old.remove();
-      if(existingSheets.indexOf("משכורת "+name+" "+month)>=0){
+      if(existingSheets.indexOf(name+"_"+month)>=0){
         var badge=document.createElement("span");
         badge.className="sal-badge";
         badge.textContent="✅ כבר הופק";
@@ -1693,7 +1693,7 @@ function runNextSalary(month,btn){
     el.style.display="block";
     var btns="";
     _salDone.forEach(function(w){
-      var sheetName="משכורת "+w+" "+month;
+      var sheetName=w+"_"+month;
       var fileName=w+"_"+month+".pdf";
       btns+='<button class="btn-add-inline" style="margin:4px;padding:6px 12px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:.82rem" data-sheet="'+sheetName+'" data-file="'+fileName+'" onclick="downloadSalaryPDF(this.dataset.sheet,this.dataset.file)">📄 '+w+'</button>';
     });
@@ -1812,6 +1812,7 @@ function openWorkerCard(i){
   document.getElementById("wcBank").value    = r.bank    || "";
   document.getElementById("wcBranch").value  = r.branch  || "";
   document.getElementById("wcBankNum").value = r.bankNum || "";
+  document.getElementById("wcAccountName").value = r.accountName || "";
   document.getElementById("workerCardModal").style.display = "block";
 }
 function closeWorkerCard(){
@@ -1827,6 +1828,7 @@ function saveWorkerCard(){
   r.bank    = document.getElementById("wcBank").value.trim();
   r.branch  = document.getElementById("wcBranch").value.trim();
   r.bankNum = document.getElementById("wcBankNum").value.trim();
+  r.accountName = document.getElementById("wcAccountName").value.trim();
   apiCall('saveWorkerRates', {rates: rates}, function(){
     showToast("פרטי " + r.name + " נשמרו ✅");
     renderRates();
@@ -1840,7 +1842,7 @@ function sendWorkerPDF(){
   var monthSel = document.getElementById("salMonth");
   var month = monthSel ? monthSel.value : "";
   if(!month){ showToast("עבור לטאב משכורות ובחר חודש תחילה","var(--orange)"); return; }
-  var sheetName = "משכורת " + r.name + " " + month;
+  var sheetName = r.name + "_" + month;
   var subject = encodeURIComponent("משכורת " + r.name + " - " + month);
   var body = encodeURIComponent("שלום " + r.name + ",\nמצורפת משכורת לחודש " + month + ".\n\nבברכה");
   apiCall('getSheetGid', {sheetName: sheetName}, function(gid){
@@ -1902,6 +1904,10 @@ if ('serviceWorker' in navigator) {
           <label class="lbl" style="font-size:.75rem">מספר חשבון</label>
           <input id="wcBankNum" type="text" placeholder="מספר חשבון" class="inp" style="font-size:.85rem">
         </div>
+      </div>
+      <div style="margin-top:10px">
+        <label class="lbl" style="font-size:.75rem">חשבון על שם</label>
+        <input id="wcAccountName" type="text" placeholder="שם בעל החשבון" class="inp" style="font-size:.85rem">
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:18px">
