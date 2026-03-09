@@ -1799,6 +1799,65 @@ function confirmDeleteWorker(){
     });
   }, function(e){ showToast(e.message||"שגיאה","var(--red)"); btn.textContent="🗑️ הסר עובד"; btn.disabled=false; });
 }
+
+// ===== כרטיס עובד =====
+var _wcIndex = -1;
+function openWorkerCard(i){
+  _wcIndex = i;
+  var r = rates[i];
+  document.getElementById("wcTitle").textContent = "👤 " + r.name;
+  document.getElementById("wcEmail").value   = r.email   || "";
+  document.getElementById("wcPhone").value   = r.phone   || "";
+  document.getElementById("wcId").value      = r.idNum   || "";
+  document.getElementById("wcBank").value    = r.bank    || "";
+  document.getElementById("wcBranch").value  = r.branch  || "";
+  document.getElementById("wcBankNum").value = r.bankNum || "";
+  document.getElementById("workerCardModal").style.display = "block";
+}
+function closeWorkerCard(){
+  document.getElementById("workerCardModal").style.display = "none";
+  _wcIndex = -1;
+}
+function saveWorkerCard(){
+  if(_wcIndex < 0) return;
+  var r = rates[_wcIndex];
+  r.email   = document.getElementById("wcEmail").value.trim();
+  r.phone   = document.getElementById("wcPhone").value.trim();
+  r.idNum   = document.getElementById("wcId").value.trim();
+  r.bank    = document.getElementById("wcBank").value.trim();
+  r.branch  = document.getElementById("wcBranch").value.trim();
+  r.bankNum = document.getElementById("wcBankNum").value.trim();
+  apiCall('saveWorkerRates', {rates: rates}, function(){
+    showToast("פרטי " + r.name + " נשמרו ✅");
+    renderRates();
+    closeWorkerCard();
+  }, function(){ showToast("שגיאה בשמירה","var(--red)"); });
+}
+function sendWorkerPDF(){
+  if(_wcIndex < 0) return;
+  var r = rates[_wcIndex];
+  if(!r.email){ showToast("אין אימייל לעובד זה","var(--orange)"); return; }
+  var monthSel = document.getElementById("salMonth");
+  var month = monthSel ? monthSel.value : "";
+  if(!month){ showToast("עבור לטאב משכורות ובחר חודש תחילה","var(--orange)"); return; }
+  var sheetName = "משכורת " + r.name + " " + month;
+  var subject = encodeURIComponent("משכורת " + r.name + " - " + month);
+  var body = encodeURIComponent("שלום " + r.name + ",\nמצורפת משכורת לחודש " + month + ".\n\nבברכה");
+  apiCall('getSheetGid', {sheetName: sheetName}, function(gid){
+    if(!gid){ showToast("לא נמצא דוח — הכן דוח תחילה","var(--orange)"); return; }
+    var ssId = "1qfq6n2a5CINMEq4IOWG-nr_gf6-27pD9RJRDzCGN6Nk";
+    var pdfUrl = "https://docs.google.com/spreadsheets/d/"+ssId+"/export?format=pdf&gid="+gid
+      +"&portrait=true&fitw=true&sheetnames=false&pagenums=false&gridlines=false"
+      +"&top_margin=0.5&bottom_margin=0.5&left_margin=0.5&right_margin=0.5";
+    var a = document.createElement("a");
+    a.href = pdfUrl; a.download = r.name+"_"+month+".pdf"; a.target="_blank";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){
+      window.open("https://mail.google.com/mail/?view=cm&to="+encodeURIComponent(r.email)+"&su="+subject+"&body="+body,"_blank");
+    },1000);
+    showToast("PDF יורד + Gmail נפתח 📧");
+  });
+}
 </script>
 
 <script>
