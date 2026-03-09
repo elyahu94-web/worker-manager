@@ -1695,7 +1695,9 @@ function runNextSalary(month,btn){
     _salDone.forEach(function(w){
       var sheetName=w+"_"+month;
       var fileName=w+"_"+month+".pdf";
-      btns+='<button class="btn-add-inline" style="margin:4px;padding:6px 12px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:.82rem" data-sheet="'+sheetName+'" data-file="'+fileName+'" onclick="downloadSalaryPDF(this.dataset.sheet,this.dataset.file)">📄 '+w+'</button>';
+      var wEmail = (function(n){ for(var i=0;i<rates.length;i++) if(rates[i].name===n) return rates[i].email||''; return ''; })(w);
+      var emailBtn = wEmail ? '<button style="margin:4px 0 4px 2px;padding:6px 10px;background:rgba(79,142,247,.1);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:.82rem;cursor:pointer" data-email="'+wEmail+'" data-name="'+w+'" data-month="'+month+'" onclick="sendSalaryEmail(this.dataset.email,this.dataset.name,this.dataset.month)">📧</button>' : '';
+      btns+='<span style="display:inline-flex;align-items:center;margin:2px"><button class="btn-add-inline" style="padding:6px 12px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:.82rem" data-sheet="'+sheetName+'" data-file="'+fileName+'" onclick="downloadSalaryPDF(this.dataset.sheet,this.dataset.file)">📄 '+w+'</button>'+emailBtn+'</span>';
     });
     el.innerHTML="<div style='margin-bottom:8px'>✅ הופקו "+_salDone.length+" דוחות:</div><div>"+btns+"</div>";
     showToast("כל הדוחות הופקו ✅");
@@ -1802,6 +1804,27 @@ function confirmDeleteWorker(){
 
 // ===== כרטיס עובד =====
 var _wcIndex = -1;
+
+function sendSalaryEmail(email, workerName, month){
+  var sheetName = workerName + "_" + month;
+  var subject = encodeURIComponent("משכורת " + workerName + " - " + month);
+  var body = encodeURIComponent("שלום " + workerName + ",\nמצורפת משכורת לחודש " + month + ".\n\nבברכה");
+  apiCall('getSheetGid', {sheetName: sheetName}, function(gid){
+    if(!gid){ showToast("לא נמצא דוח — הכן דוח תחילה","var(--red)"); return; }
+    var ssId = "1qfq6n2a5CINMEq4IOWG-nr_gf6-27pD9RJRDzCGN6Nk";
+    var pdfUrl = "https://docs.google.com/spreadsheets/d/"+ssId+"/export?format=pdf&gid="+gid
+      +"&portrait=true&fitw=true&sheetnames=false&pagenums=false&gridlines=false"
+      +"&top_margin=0.5&bottom_margin=0.5&left_margin=0.5&right_margin=0.5";
+    var a = document.createElement("a");
+    a.href=pdfUrl; a.download=workerName+"_"+month+".pdf"; a.target="_blank";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){
+      window.open("https://mail.google.com/mail/?view=cm&to="+encodeURIComponent(email)+"&su="+subject+"&body="+body,"_blank");
+    },1000);
+    showToast("PDF יורד + Gmail נפתח 📧");
+  });
+}
+
 function openWorkerCard(i){
   _wcIndex = i;
   var r = rates[i];
@@ -1913,8 +1936,8 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:18px">
-      <button onclick="saveWorkerCard()" style="flex:1;background:var(--green);color:#fff;border:none;border-radius:10px;padding:12px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial">💾 שמור</button>
-      <button id="wcEmailBtn" onclick="sendWorkerPDF()" style="flex:1;background:rgba(79,142,247,.2);color:var(--accent);border:1px solid var(--accent);border-radius:10px;padding:12px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial">📧 שלח משכורת למייל</button>
+      <button onclick="saveWorkerCard()" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:10px;padding:12px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial">💾 שמור</button>
+
     </div>
   </div>
 </div>
