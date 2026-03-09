@@ -1674,6 +1674,16 @@ function renderWorkerCheckboxes(){
 }
 function checkExistingReports(month){
   if(!month) return;
+  // הצג "טוען..." על כל badge
+  document.querySelectorAll(".salChk").forEach(function(chk){
+    var label=chk.parentElement;
+    var old=label.querySelector(".sal-badge"); if(old) old.remove();
+    var loading=document.createElement("span");
+    loading.className="sal-badge sal-badge-loading";
+    loading.textContent="⏳";
+    loading.style.cssText="font-size:.7rem;color:var(--text3);margin-right:auto";
+    label.appendChild(loading);
+  });
   apiCall('getExistingSheetNames', null, function(existingSheets){
     document.querySelectorAll(".salChk").forEach(function(chk){
       var name=chk.dataset.name;
