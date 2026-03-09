@@ -1756,9 +1756,18 @@ function runNextSalary(month,btn){
     });
     el.innerHTML="<div style='margin-bottom:12px;font-weight:700;color:var(--green)'>✅ הופקו "+_salDone.length+" דוחות:</div>"+btns;
     showToast("כל הדוחות הופקו ✅");
+    // הצג "טוען..." על כל שורה
+    _salDone.forEach(function(w){
+      var el = document.getElementById("emailStatus_" + w);
+      if(el) el.innerHTML = '<span style="color:var(--text3);font-size:.75rem">⏳ בודק שליחות קודמות...</span>';
+    });
     // טען לוג מיילים ועדכן סטטוסים
     loadEmailLog(function(){
-      _salDone.forEach(function(w){ updateEmailStatus(w, month); });
+      _salDone.forEach(function(w){
+        var el = document.getElementById("emailStatus_" + w);
+        if(el) el.innerHTML = ''; // נקה טוען
+        updateEmailStatus(w, month);
+      });
     });
     checkExistingReports(month); return;
   }
@@ -1911,7 +1920,7 @@ function updateEmailStatus(workerName, month){
   var s = _sentEmails[key];
   if(!s) return;
   var el = document.getElementById("emailStatus_" + workerName);
-  if(el) el.innerHTML = '<span style="color:var(--accent)">✅ נשלח ב-' + s.date + ' ' + s.time + ' אל ' + s.email + '</span>';
+  if(el) el.innerHTML = '<span style="color:var(--accent)">✅ נשלח בתאריך ' + s.date + ' בשעה ' + s.time + ' אל ' + s.email + '</span>';
   var btn = document.getElementById("emailBtn_" + workerName);
   if(btn){ btn.style.background="rgba(79,142,247,.3)"; btn.title="נשלח — לחץ לשליחה חוזרת"; }
 }
