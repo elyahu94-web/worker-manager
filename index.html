@@ -1688,7 +1688,14 @@ function runNextSalary(month,btn){
     btn.disabled=false; btn.textContent="💵 הכן דוחות";
     var el=document.getElementById("salResult");
     el.style.display="block";
-    el.innerHTML="✅ הופקו "+_salDone.length+" דוחות: <b>"+_salDone.join(", ")+"</b>";
+    var btns="";
+    _salDone.forEach(function(w){
+      var sheetName="משכורת "+w+" "+month;
+      var fileName=w+"_"+month+".pdf";
+      var url="https://docs.google.com/spreadsheets/d/"+SS_ID+"/export?format=pdf&gid=GIDPLACEHOLDER&portrait=true&fitw=true&sheetnames=false&pagenums=false&gridlines=false&fzr=false&top_margin=0.5&bottom_margin=0.5&left_margin=0.5&right_margin=0.5";
+      btns+="<button class='btn-add-inline' style='margin:4px;padding:6px 12px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:.82rem' onclick='downloadSalaryPDF(""+sheetName+"",""+fileName+"")'>📄 "+w+"</button>";
+    });
+    el.innerHTML="<div style='margin-bottom:8px'>✅ הופקו "+_salDone.length+" דוחות:</div><div>"+btns+"</div>";
     showToast("כל הדוחות הופקו ✅");
     checkExistingReports(month); return;
   }
@@ -1702,6 +1709,25 @@ function runNextSalary(month,btn){
   });
 }
 
+var SS_ID = "1qfq6n2a5CINMEq4IOWG-nr_gf6-27pD9RJRDzCGN6Nk";
+function downloadSalaryPDF(sheetName, fileName){
+  // קבל את ה-GID של הגיליון ואז הורד
+  apiCall('getSheetGid', {sheetName: sheetName}, function(gid){
+    if(!gid){ showToast("הגיליון לא נמצא","var(--red)"); return; }
+    var url="https://docs.google.com/spreadsheets/d/"+SS_ID+"/export?format=pdf"
+      +"&gid="+gid
+      +"&portrait=true&fitw=true&sheetnames=false&pagenums=false"
+      +"&gridlines=false&fzr=false"
+      +"&top_margin=0.5&bottom_margin=0.5&left_margin=0.5&right_margin=0.5";
+    var a=document.createElement("a");
+    a.href=url;
+    a.download=fileName;
+    a.target="_blank";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+}
 function loadReportData(){
   apiCall('getMonthsList', null, function(months){
     var sel=document.getElementById("selMonth");
