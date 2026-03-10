@@ -2025,7 +2025,7 @@ function openWorkerPdf(workerName) {
 
   // אם יש בזיכרון — הצג מיד
   if (_workerPdfs[workerName] && _workerPdfs[workerName] !== '__pending__') {
-    viewer.src = _workerPdfs[workerName];
+    viewer.src = _workerPdfs[workerName] + '#navpanes=0&toolbar=1';
     viewer.style.display = 'block';
     placeholder.style.display = 'none';
     if(loadingEl) loadingEl.style.display = 'none';
@@ -2047,7 +2047,7 @@ function openWorkerPdf(workerName) {
       if(res.email) _workerEmails[workerName] = res.email;
       if(res.phone) _workerPhones[workerName] = res.phone;
       if(res.email || res.phone) _refreshPdfEmailField(workerName);
-      viewer.src = dataUrl;
+      viewer.src = dataUrl + '#navpanes=0&toolbar=1';
       viewer.style.display = 'block';
       placeholder.style.display = 'none';
       renderRates();
@@ -2163,7 +2163,7 @@ function handleWorkerPdfUpload(input) {
     _workerPdfUnsaved = _workerPdfUnsaved || {};
     _workerPdfUnsaved[workerName] = true;
     if(loadingEl) loadingEl.style.display = 'none';
-    viewer.src = dataUrl;
+    viewer.src = dataUrl + '#navpanes=0&toolbar=1';
     viewer.style.display = 'block';
     placeholder.style.display = 'none';
     renderRates();
