@@ -317,6 +317,11 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
   border-color:rgba(52,211,153,.5);
   color:var(--green);
 }
+.worker-pdf-btn.has-contact {
+  background:rgba(79,142,247,.1);
+  border-color:rgba(79,142,247,.5);
+  color:var(--accent);
+}
 </style>
 </head>
 <body>
@@ -741,8 +746,23 @@ function renderRates() {
     var hasDetails = r.email||r.phone||r.idNum||r.bankNum;
     var detailsDot = hasDetails ? "<span style='width:7px;height:7px;background:var(--green);border-radius:50%;display:inline-block;margin-right:2px'></span>" : "";
     var hasPdf = _workerPdfs[r.name];
-    var pdfBtnClass = "worker-pdf-btn" + (hasPdf ? " has-pdf" : "");
-    var pdfBtnText = hasPdf ? "✅ פרטי עובד" : "📄 פרטי עובד";
+    var hasEmail = !!(_workerEmails[r.name]);
+    var hasPhone = !!(_workerPhones && _workerPhones[r.name]);
+    var hasContactOnly = !hasPdf && (hasEmail || hasPhone);
+    var pdfBtnClass = "worker-pdf-btn" + (hasPdf ? " has-pdf" : (hasContactOnly ? " has-contact" : ""));
+    var contactLabel = "";
+    if (hasPdf) {
+      contactLabel = "✅ פרטי עובד";
+      if (hasEmail) contactLabel += " 📧";
+      if (hasPhone) contactLabel += " 📱";
+    } else if (hasContactOnly) {
+      if (hasEmail && hasPhone) contactLabel = "✅ מייל וטלפון שמורים";
+      else if (hasEmail) contactLabel = "✅ מייל שמור";
+      else contactLabel = "✅ טלפון שמור";
+    } else {
+      contactLabel = "📄 פרטי עובד";
+    }
+    var pdfBtnText = contactLabel;
     html += "<div class='rrow'>";
     html += "<input type='checkbox' class='workerChk' data-name='"+r.name+"' onchange='updateDeleteBtn()' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0'>";
     html += "<input value='"+r.name+"' onchange='rates["+origIdx+"].name=this.value' placeholder='שם' style='flex:3;min-width:100px'>";
@@ -790,6 +810,11 @@ function saveRates() {
 function loadRates() {
   apiCall('getWorkerRates', null, function(data){
     rates = data || [];
+    // סנכרן _workerEmails/_workerPhones מהשיטס
+    rates.forEach(function(r){
+      if(r.email) _workerEmails[r.name] = r.email;
+      if(r.phone) { _workerPhones = _workerPhones||{}; _workerPhones[r.name] = r.phone; }
+    });
     apiCall('getSavedProjects', null, function(saved){
       var seen = {};
       _projects = [];
@@ -2084,8 +2109,9 @@ function _refreshPdfEmailField(workerName) {
   var emailInp = document.getElementById('pdfEmailInput');
   var phoneInp = document.getElementById('pdfPhoneInput');
   if(!emailRow || !emailInp) return;
-  emailInp.value = _workerEmails[workerName] || '';
-  if(phoneInp) phoneInp.value = _workerPhones[workerName] || '';
+  var _wr = rates.filter(function(r){return r.name===workerName;})[0];
+  emailInp.value = (_wr && _wr.email) || _workerEmails[workerName] || '';
+  if(phoneInp) phoneInp.value = (_wr && _wr.phone) || (_workerPhones && _workerPhones[workerName]) || '';
   emailRow.style.display = 'flex';
 }
 
@@ -2198,6 +2224,16 @@ function saveWorkerPdfData() {
   if(emailVal) _workerEmails[workerName] = emailVal;
   _workerPhones = _workerPhones || {};
   if(phoneVal) _workerPhones[workerName] = phoneVal;
+  // עדכן rates ישירות
+  for(var _i=0;_i<rates.length;_i++){
+    if(rates[_i].name===workerName){
+      rates[_i].email = emailVal;
+      rates[_i].phone = phoneVal;
+      break;
+    }
+  }
+  // שמור לשיטס
+  apiCall('saveWorkerRates', {rates: rates}, function(){}, function(){});
 
   var btn = document.getElementById('pdfSaveBtn');
   btn.disabled = true;
