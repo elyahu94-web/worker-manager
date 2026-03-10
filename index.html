@@ -573,6 +573,7 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
         <div id="workerCheckboxes" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:4px;margin-top:6px;max-height:240px;overflow-y:auto"></div>
       </div>
       <button class="btn bp" id="genSalBtn" onclick="generateSalaryUI()" style="margin-top:14px">💵 הכן דוחות</button>
+      <button onclick="deleteAllSalarySheets(this)" style="margin-top:8px;width:100%;padding:9px;background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.3);border-radius:9px;font-weight:700;cursor:pointer;font-family:Heebo,Arial;font-size:.85rem">🗑️ מחק את כל הדוחות מהשיטס</button>
       <div id="salResult" class="report-result"></div>
     </div>
   </div>
@@ -1839,9 +1840,7 @@ function runNextSalary(month,btn){
         +'<div id="emailStatus_'+w+'" style="font-size:.75rem;margin-top:3px"></div>'
         +'</div>';
     });
-    var month_cur = month;
-    var deleteAllBtn = '<button onclick="deleteAllReports(\''+month_cur+'\','+JSON.stringify(_salDone)+')" style="margin-bottom:12px;padding:7px 16px;background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3);border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial">🗑️ מחק מהשיטס את כל הדוחות שהופקו</button>';
-    el.innerHTML="<div style='margin-bottom:8px;font-weight:700;color:var(--green)'>✅ הופקו "+_salDone.length+" דוחות:</div>"+deleteAllBtn+btns;
+    el.innerHTML="<div style='margin-bottom:8px;font-weight:700;color:var(--green)'>✅ הופקו "+_salDone.length+" דוחות:</div>"+btns;
     showToast("כל הדוחות הופקו ✅");
     _salDone.forEach(function(w){
       var el = document.getElementById("emailStatus_" + w);
@@ -1888,23 +1887,26 @@ function sendWhatsappWithPdf(workerName, phone, month) {
 }
 
 function deleteAllReports(month, workers) {
-  if (!confirm("למחוק את כל " + workers.length + " הדוחות של " + month + "?")) return;
-  var pending = workers.slice();
-  var deleted = 0;
-  function next() {
-    if (!pending.length) {
-      showToast("נמחקו " + deleted + " דוחות ✅");
-      document.getElementById("salResult").style.display = "none";
-      checkExistingReports(month);
-      return;
-    }
-    var w = pending.shift();
-    apiCall('deleteSalarySheet', { sheetName: w + "_" + month }, function() {
-      deleted++;
-      next();
-    }, function() { next(); });
-  }
-  next();
+  // נשאר לתאימות אחורה
+}
+
+function deleteAllSalarySheets(btn) {
+  if (!confirm("למחוק את כל גליונות הדוחות מהשיטס?\nפעולה זו לא ניתנת לביטול!")) return;
+  var origText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px;justify-content:center"><span style="width:14px;height:14px;border:2px solid rgba(248,113,113,.4);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span> מוחק...</span>';
+  apiCall('deleteAllSalarySheets', {}, function(res) {
+    btn.disabled = false;
+    btn.innerHTML = origText;
+    showToast("נמחקו " + (res.deleted||0) + " גליונות ✅");
+    document.getElementById("salResult").style.display = "none";
+    var month = document.getElementById("salMonth").value;
+    if (month) checkExistingReports(month);
+  }, function() {
+    btn.disabled = false;
+    btn.innerHTML = origText;
+    showToast("שגיאה במחיקה", "var(--red)");
+  });
 }
 
 var SS_ID = "1qfq6n2a5CINMEq4IOWG-nr_gf6-27pD9RJRDzCGN6Nk";
@@ -2403,7 +2405,7 @@ if ('serviceWorker' in navigator) {
       </div>
       <div>
         <label class="lbl">📱 טלפון</label>
-        <input id="wcPhone" type="tel" placeholder="05X-XXXXXXX" class="inp">
+        <input id="wcPhone" type="text" placeholder="05X-XXXXXXX" class="inp">
       </div>
       <div>
         <label class="lbl">🪪 תעודת זהות</label>
@@ -2471,7 +2473,7 @@ if ('serviceWorker' in navigator) {
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:.8rem;font-weight:600;color:var(--text2);white-space:nowrap">📱 טלפון:</span>
-        <input id="pdfPhoneInput" type="tel" placeholder="הכנס טלפון העובד..." style="flex:1;min-width:160px;padding:7px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;font-family:Heebo,Arial;color:var(--text1);direction:ltr" oninput="var w=document.getElementById('workerPdfModalName').value; if(w){_workerPhones=_workerPhones||{};_workerPhones[w]=this.value.trim();}">
+        <input id="pdfPhoneInput" type="text" placeholder="הכנס טלפון העובד..." style="flex:1;min-width:160px;padding:7px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;font-family:Heebo,Arial;color:var(--text1);direction:ltr" oninput="var w=document.getElementById('workerPdfModalName').value; if(w){_workerPhones=_workerPhones||{};_workerPhones[w]=this.value.trim();}">
       </div>
       <button id="pdfSaveBtn" onclick="saveWorkerPdfData()" style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial">💾 שמור</button>
       <div id="pdfSaveStatus" style="display:none;align-self:center;padding:7px 16px;border-radius:8px;font-size:.85rem;font-weight:700;font-family:Heebo,Arial"></div>
