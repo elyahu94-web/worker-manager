@@ -126,12 +126,13 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
 
 /* TOAST */
 .toast{
-  position:fixed;top:14px;left:50%;
+  position:fixed;top:20px;left:50%;
   transform:translateX(-50%) translateY(-120px);
   background:var(--green);color:#0a0e1a;
   padding:11px 22px;border-radius:10px;
   font-weight:700;transition:transform .35s;
-  z-index:99999;font-size:.88rem;
+  z-index:999999;font-size:.88rem;
+  pointer-events:none;
 }
 .toast.on{transform:translateX(-50%) translateY(0)}
 
@@ -1774,7 +1775,8 @@ function runNextSalary(month,btn){
         +'<div style="display:flex;align-items:center;gap:6px">'
         +'<button style="padding:5px 11px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:7px;font-size:.8rem;cursor:pointer" data-sheet="'+sheetName+'" data-file="'+fileName+'" onclick="downloadSalaryPDF(this.dataset.sheet,this.dataset.file)" title="הורד דוח נוכחות">⬇️ דוח נוכחות</button>'
         +attachBtn
-        +(wEmail ? '<button id="emailBtn_'+w+'" style="padding:5px 11px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:7px;font-size:.8rem;cursor:pointer" data-email="'+wEmail+'" data-name="'+w+'" data-month="'+month+'" onclick="confirmAndSend(this.dataset.email,this.dataset.name,this.dataset.month)" title="שלח מייל">📧</button>' : '')
+        +(wEmail ? '<button id="emailBtn_'+w+'" style="padding:5px 11px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:7px;font-size:.8rem;cursor:pointer" data-email="'+wEmail+'" data-name="'+w+'" data-month="'+month+'" onclick="confirmAndSend(this.dataset.email,this.dataset.name,this.dataset.month)" title="שלח מייל לـ'+wEmail+'">📧 מייל</button>' : '<button disabled style="padding:5px 11px;background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:7px;font-size:.8rem;cursor:not-allowed;opacity:.4" title="אין אימייל שמור">📧 מייל</button>')
+        +(function(){ var p=(function(n){ for(var i=0;i<rates.length;i++) if(rates[i].name===n) return rates[i].phone||''; return ''; })(w); var wp=p?p.replace(/[^0-9]/g,''):''; if(wp.startsWith('0')) wp='972'+wp.slice(1); return p ? '<button style="padding:5px 11px;background:rgba(37,211,102,.15);color:#25d366;border:1px solid #25d366;border-radius:7px;font-size:.8rem;cursor:pointer" onclick="window.open(\'https://wa.me/'+wp+'\',\'_blank\')" title="וואטסאפ לـ'+p+'">💬 וואטסאפ</button>' : '<button disabled style="padding:5px 11px;background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:7px;font-size:.8rem;cursor:not-allowed;opacity:.4" title="אין טלפון שמור">💬 וואטסאפ</button>'; })()
         +'</div>'
         +'</div>'
         +'<div style="font-size:.75rem;color:var(--text2);display:flex;gap:12px;flex-wrap:wrap">'
@@ -2219,6 +2221,8 @@ function saveWorkerPdfData() {
       _workerPdfUnsaved = _workerPdfUnsaved || {};
       delete _workerPdfUnsaved[workerName];
       showToast('נשמר בדרייב ✅');
+      var st = document.getElementById('pdfSaveStatus');
+      if(st){st.style.display='inline-block';st.style.background='rgba(52,211,153,.15)';st.style.color='var(--green)';st.style.border='1px solid rgba(52,211,153,.3)';st.textContent='✅ נשמר בדרייב!';}
     } else {
       showToast('שגיאה בשמירה', 'var(--red)');
     }
@@ -2332,6 +2336,7 @@ if ('serviceWorker' in navigator) {
         <input id="pdfPhoneInput" type="tel" placeholder="הכנס טלפון העובד..." style="flex:1;min-width:160px;padding:7px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;font-family:Heebo,Arial;color:var(--text1);direction:ltr" oninput="var w=document.getElementById('workerPdfModalName').value; if(w){_workerPhones=_workerPhones||{};_workerPhones[w]=this.value.trim();}">
       </div>
       <button id="pdfSaveBtn" onclick="saveWorkerPdfData()" style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial">💾 שמור</button>
+      <div id="pdfSaveStatus" style="display:none;align-self:center;padding:7px 16px;border-radius:8px;font-size:.85rem;font-weight:700;font-family:Heebo,Arial"></div>
     </div>
 
     <!-- תוכן -->
