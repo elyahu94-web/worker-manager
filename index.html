@@ -1817,7 +1817,9 @@ function runNextSalary(month,btn){
         +'<div id="emailStatus_'+w+'" style="font-size:.75rem;margin-top:3px"></div>'
         +'</div>';
     });
-    el.innerHTML="<div style='margin-bottom:12px;font-weight:700;color:var(--green)'>✅ הופקו "+_salDone.length+" דוחות:</div>"+btns;
+    var month_cur = month;
+    var deleteAllBtn = '<button onclick="deleteAllReports(\''+month_cur+'\','+JSON.stringify(_salDone)+')" style="margin-bottom:12px;padding:7px 16px;background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3);border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial">🗑️ מחק מהשיטס את כל הדוחות שהופקו</button>';
+    el.innerHTML="<div style='margin-bottom:8px;font-weight:700;color:var(--green)'>✅ הופקו "+_salDone.length+" דוחות:</div>"+deleteAllBtn+btns;
     showToast("כל הדוחות הופקו ✅");
     _salDone.forEach(function(w){
       var el = document.getElementById("emailStatus_" + w);
@@ -1840,6 +1842,26 @@ function runNextSalary(month,btn){
     showToast("שגיאה ב"+worker+": "+(e.message||""),"var(--red)");
     runNextSalary(month,btn);
   });
+}
+
+function deleteAllReports(month, workers) {
+  if (!confirm("למחוק את כל " + workers.length + " הדוחות של " + month + "?")) return;
+  var pending = workers.slice();
+  var deleted = 0;
+  function next() {
+    if (!pending.length) {
+      showToast("נמחקו " + deleted + " דוחות ✅");
+      document.getElementById("salResult").style.display = "none";
+      checkExistingReports(month);
+      return;
+    }
+    var w = pending.shift();
+    apiCall('deleteSalarySheet', { sheetName: w + "_" + month }, function() {
+      deleted++;
+      next();
+    }, function() { next(); });
+  }
+  next();
 }
 
 var SS_ID = "1qfq6n2a5CINMEq4IOWG-nr_gf6-27pD9RJRDzCGN6Nk";
