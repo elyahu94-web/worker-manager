@@ -290,6 +290,32 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
   th,td{padding:6px 7px}
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== כפתור פרטי עובד PDF ===== */
+.worker-pdf-btn {
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 11px;
+  border-radius:7px;
+  border:1.5px solid rgba(167,139,250,.45);
+  background:rgba(167,139,250,.1);
+  color:var(--purple);
+  font-size:.76rem;font-weight:700;
+  cursor:pointer;
+  font-family:'Heebo',Arial;
+  white-space:nowrap;
+  transition:all .2s;
+}
+.worker-pdf-btn:hover {
+  background:rgba(167,139,250,.22);
+  border-color:var(--purple);
+  box-shadow:0 3px 10px rgba(167,139,250,.2);
+  transform:translateY(-1px);
+}
+.worker-pdf-btn.has-pdf {
+  background:rgba(52,211,153,.1);
+  border-color:rgba(52,211,153,.5);
+  color:var(--green);
+}
 </style>
 </head>
 <body>
@@ -342,7 +368,6 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
       <h2>✏️ הוספה ידנית של עובד</h2>
       <p class="hint">רישום עובד בודד עם בחירת סוג תשלום</p><br>
 
-      <!-- סוג תשלום -->
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <button id="manualBtnDaily" class="type-btn on" onclick="setManualEntryType('יומי')">📅 יומי קבוע</button>
         <button id="manualBtnHourly" class="type-btn" onclick="setManualEntryType('שעתי')">🕐 לפי שעה</button>
@@ -380,7 +405,6 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
         <input type="date" id="manualDate" class="inp">
       </div>
 
-      <!-- שדות שעתי -->
       <div id="manualHourlyFields">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
           <div>
@@ -406,7 +430,6 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
         </div>
       </div>
 
-      <!-- שדות יומי -->
       <div id="manualDailyFields" style="display:none">
         <div style="margin-bottom:12px">
           <label class="lbl">סכום יומי (₪)</label>
@@ -472,7 +495,7 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
         <label class="lbl">הערה (אופציונלי)</label>
         <input type="text" id="mifraNote" placeholder="מפרעה..." class="inp">
       </div>
-      <button onclick="doAddMifra()" class="btn bp">✅ הוסף מפרעה</button>
+      <button id="addMifraBtn" onclick="doAddMifra()" class="btn bp">✅ הוסף מפרעה</button>
     </div>
 
     <div class="crd" style="margin-bottom:14px">
@@ -615,7 +638,7 @@ var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxT3TB1RRXh72-8A9
 
 var rates = [];
 var parsedRows = [];
-var _knownProjects = []; // פרויקטים מהשיטס
+var _knownProjects = [];
 var heMonths = ["","ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
 // ===== API CALL =====
@@ -664,7 +687,6 @@ function showToast(m, c) {
 
 // ===== RATES =====
 function getRate(name, proj) {
-  // חיפוש לפי שם בלבד — הסכום קבוע בלי קשר לפרויקט
   for (var i = 0; i < rates.length; i++) {
     var r = rates[i];
     if (r.name === name.trim()) {
@@ -706,6 +728,9 @@ function renderRates() {
       : "<span class='badge-green'>📅 יומי</span>";
     var hasDetails = r.email||r.phone||r.idNum||r.bankNum;
     var detailsDot = hasDetails ? "<span style='width:7px;height:7px;background:var(--green);border-radius:50%;display:inline-block;margin-right:2px'></span>" : "";
+    var hasPdf = _workerPdfs[r.name];
+    var pdfBtnClass = "worker-pdf-btn" + (hasPdf ? " has-pdf" : "");
+    var pdfBtnText = hasPdf ? "✅ פרטי עובד" : "📄 פרטי עובד";
     html += "<div class='rrow'>";
     html += "<input type='checkbox' class='workerChk' data-name='"+r.name+"' onchange='updateDeleteBtn()' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0'>";
     html += "<input value='"+r.name+"' onchange='rates["+i+"].name=this.value' placeholder='שם' style='flex:3;min-width:100px'>";
@@ -716,6 +741,7 @@ function renderRates() {
     }
     html += badge;
     html += "<button onclick='openWorkerCard("+i+")' title='כרטיס עובד' style='background:rgba(79,142,247,.15);color:var(--accent);border:1px solid rgba(79,142,247,.3);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:.8rem;white-space:nowrap'>"+detailsDot+"👤</button>";
+    html += "<button onclick=\"openWorkerPdf('"+r.name.replace(/'/g,"\\'")+"')\" class=\""+pdfBtnClass+"\" id=\"pdfBtn_"+i+"\">"+pdfBtnText+"</button>";
     html += "</div>";
   });
   el.innerHTML = html;
@@ -752,14 +778,12 @@ function saveRates() {
 function loadRates() {
   apiCall('getWorkerRates', null, function(data){
     rates = data || [];
-    // טען רק מגיליון "פרויקטים" השמור
     apiCall('getSavedProjects', null, function(saved){
       var seen = {};
       _projects = [];
       (saved||[]).forEach(function(p){ if(p&&!seen[p]){seen[p]=1;_projects.push(p);} });
       _projects.sort();
       _knownProjects = _projects.slice();
-      // רענן את כל הרשימות אחרי שהפרויקטים נטענו
       loadManualSelects();
       refreshProjectsList();
     });
@@ -772,7 +796,6 @@ loadRates();
 var _projects = [];
 
 function loadProjectsList(cb) {
-  // טען רק מגיליון "פרויקטים" השמור — לא מנוכחות
   apiCall('getSavedProjects', null, function(saved){
     var seen = {};
     _projects = [];
@@ -784,12 +807,10 @@ function loadProjectsList(cb) {
 }
 
 function renderProjectsTab() {
-  // הצג מה שיש ב-_projects עכשיו — בלי לטעון מחדש
   var el = document.getElementById("projectsListDisplay");
   if(!el) return;
   if(!_projects.length){
     el.innerHTML = "<div class='loading'>טוען...</div>";
-    // טען מהשרת רק אם ריק
     loadProjectsList(function(){ renderProjectsTab(); });
     return;
   }
@@ -814,7 +835,6 @@ function addProjectToList(nameOverride) {
   _projects.sort();
   _knownProjects = _projects.slice();
   renderProjectsTab();
-  // רענן select בהוספה ידנית
   var sel=document.getElementById("manualProjSelect");
   if(sel){ sel.innerHTML="<option value=''>בחר פרויקט...</option>"; _projects.forEach(function(p){ sel.innerHTML+="<option value='"+p+"'>"+p+"</option>"; }); }
   apiCall('saveProjectsList', {projects: _projects}, function(){
@@ -877,7 +897,6 @@ function setManualEntryType(type) {
   document.getElementById("manualHourlyFields").style.display = isH ? "block" : "none";
   document.getElementById("manualDailyFields").style.display  = isH ? "none" : "block";
   _manualTotal = 0; _manualHours = 0;
-  // מלא סכום אוטומטי אם יש עובד ופרויקט
   manualFillRate();
 }
 
@@ -909,7 +928,7 @@ function onProjInputChange(val){
   var alertEl=document.getElementById("manualProjNewAlert");
   if(v && _projects.indexOf(v)<0){
     alertEl.style.display="block";
-    document.getElementById("manualProject").value=""; // חסום עד שמוסיפים
+    document.getElementById("manualProject").value="";
   } else {
     alertEl.style.display="none";
   }
@@ -921,7 +940,6 @@ function addProjFromManual(){
   addProjectToList(v);
   document.getElementById("manualProjNewAlert").style.display="none";
   document.getElementById("manualProject").value=v;
-  // עדכן את ה-select גם
   var sel=document.getElementById("manualProjSelect");
   if(sel) sel.innerHTML+="<option value='"+v+"'>"+v+"</option>";
   manualFillRate();
@@ -929,7 +947,6 @@ function addProjFromManual(){
 }
 function loadManualSelects() {
   document.getElementById("manualDate").value = new Date().toISOString().split("T")[0];
-  // מלא datalist פרויקטים
   var sel = document.getElementById("manualProjSelect");
   if (sel) {
     sel.innerHTML = "<option value=''>בחר פרויקט...</option>";
@@ -959,17 +976,14 @@ function onManualNameChange() {
   document.getElementById("manualCalcBox").style.display = "none";
   document.getElementById("manualDailyCalcBox").style.display = "none";
   if (!name) {
-    // כשאין עובד נבחר — הצג את כל הפרויקטים
     var allProjs = {};
     rates.forEach(function(r){ if(r.project) allProjs[r.project]=1; });
     Object.keys(allProjs).sort().forEach(function(p){ dl.innerHTML += "<option value='"+p+"'>"; });
     return;
   }
-  // תמיד הצג את כל הפרויקטים — עובד יכול לעבור פרויקט
   var allProjs = {};
   rates.forEach(function(r){ if(r.project) allProjs[r.project]=1; });
   Object.keys(allProjs).sort().forEach(function(p){ dl.innerHTML += "<option value='"+p+"'>"; });
-  // אם יש לעובד פרויקט אחד — מלא אוטומטית
   var workerRecs = rates.filter(function(r){ return r.name === name; });
   if (workerRecs.length === 1) { inp.value = workerRecs[0].project; manualFillRate(); }
 }
@@ -989,7 +1003,6 @@ function manualFillRate() {
     }
     manualCalc();
   } else {
-    // יומי — מלא סכום קבוע
     var dailyAmt = rec.rateType === "שעתי" ? Math.round((rec.hourlyRate||0)*8) : (rec.amount||0);
     document.getElementById("manualDailyAmount").value = dailyAmt || "";
     document.getElementById("manualDailyHint").textContent = dailyAmt ? "✅ סכום קבוע מהמערכת: ₪"+dailyAmt : "";
@@ -1109,7 +1122,6 @@ function findClosest(name) {
 }
 
 function findClosestProject(proj) {
-  // רק מגיליון הפרויקטים הרשמי
   var knownProjs = _projects.slice();
   if(!knownProjs.length) return null;
   var projL=proj.trim().toLowerCase();
@@ -1138,12 +1150,9 @@ function applyProjectFix(key){
     ta.value=ta.value.split(fix.wrong).join(fix.correct);
   }
   parsedRows.forEach(function(r){ if(r.project===fix.wrong) r.project=fix.correct; });
-  // סמן כטופל — לא מנקה את כולם
   delete _pendingFixes[key];
-  // עדכן את תצוגת האזהרות
   var el=document.getElementById("warn_"+key);
   if(el) el.style.display="none";
-  // אם אין יותר אזהרות — נקה ואפשר שליחה
   if(!Object.keys(_pendingFixes).length){
     document.getElementById("errorsBox").innerHTML="";
     document.getElementById("submitBtn").disabled=false;
@@ -1190,7 +1199,6 @@ function renameProjectInImport(wrong, key){
   var ta=document.getElementById("rawText");
   ta.value=ta.value.split(wrong).join(newName);
   parsedRows.forEach(function(r){ if(r.project===wrong) r.project=newName; });
-  // שאל אם להוסיף לרשימה
   if(_projects.indexOf(newName)<0) addProjectToList(newName);
   delete _pendingFixes[key];
   var el=document.getElementById("warn_"+key);
@@ -1231,7 +1239,6 @@ function parseList() {
         if(_projects.length){
           var cpMatch=findClosestProject(proj);
           if(cpMatch){
-            // פרויקט דומה — הצע תיקון
             var fixKey="pfix_"+Object.keys(_pendingFixes).length;
             _pendingFixes[fixKey]={wrong:proj,correct:cpMatch};
             projWarnings.push("<span id='warn_"+fixKey+"' class='err-fix-row' data-fix-key='"+fixKey+"'>פרויקט \""+proj+"\": לא מוכר — האם התכוונת ל\""+cpMatch+"\"?&nbsp;"
@@ -1239,7 +1246,6 @@ function parseList() {
               +"<button class='btn-add-inline' style='background:rgba(251,191,36,.15);color:var(--yellow);border-color:var(--yellow)' onclick='ignoreProjectFix(\""+fixKey+"\")'>➡️ המשך בכל זאת</button>"
               +"</span>");
           } else if(_projects.indexOf(proj)<0){
-            // פרויקט חדש לגמרי
             var newKey="pnew_"+proj.replace(/[^a-zA-Z0-9]/g,"_");
             if(!_pendingFixes[newKey]){
               _pendingFixes[newKey]={newProj:proj};
@@ -1294,9 +1300,7 @@ function parseList() {
   } else if(projWarnings.length){
     errBox.innerHTML="<div class='warn-box'><b>🔍 פרויקטים לא מוכרים — בדוק לפני שליחה:</b><br>• "+projWarnings.join("<br>• ")+"</div>";
     document.getElementById("previewTitle").textContent="⚠️ פרויקט לא מוכר — בדוק";
-    document.getElementById("submitBtn").disabled=false; // מאפשר שליחה אחרי בחירה
-    var datesFound=[];
-    parsedRows.forEach(function(r){if(r.date&&datesFound.indexOf(r.date)<0) datesFound.push(r.date);});
+    document.getElementById("submitBtn").disabled=false;
     showToast("בדוק פרויקט לפני שליחה","var(--yellow)");
   } else {
     errBox.innerHTML="";
@@ -1388,7 +1392,6 @@ function _doSubmitAll() {
       checked++;
       if(checked===dates.length) checkDuplicates(dates);
     }, function(){ checked++; if(checked===dates.length) checkDuplicates(dates); });
-    // Note: getEntriesByDate needs date param via GET
     fetch(APPS_SCRIPT_URL + '?action=getEntriesByDate&date=' + d)
       .then(function(r){return r.json();})
       .then(function(data){
@@ -1399,8 +1402,7 @@ function _doSubmitAll() {
       })
       .catch(function(){checked++;if(checked===dates.length) checkDuplicates(dates);});
   });
-  // Reset checked since we're using fetch directly above
-  checked = -dates.length; // cancel the apiCall above
+  checked = -dates.length;
 }
 
 function checkDuplicates() {
@@ -1524,10 +1526,8 @@ function loadMifraotTab(){
   });
   document.getElementById("mifraDate").value=new Date().toISOString().split("T")[0];
 
-  // חודשים — משתי מקורות: נוכחות + מפרעות
   apiCall('getMonthsList', null, function(months1){
     apiCall('getMifraMonths', null, function(months2){
-      // מיזוג ומיון
       sel3.innerHTML="<option value=''>בחר חודש...</option>";
       var allMonths = {};
       (months1||[]).forEach(function(m){ allMonths[m]=1; });
@@ -1538,7 +1538,6 @@ function loadMifraotTab(){
         sel3.innerHTML+="<option value='"+m+"'>"+heMonths[parseInt(p[1])]+" "+p[0]+"</option>";
       });
     }, function(){
-      // fallback — רק נוכחות
       months1.forEach(function(m){
         var p=m.split("-");
         sel3.innerHTML+="<option value='"+m+"'>"+heMonths[parseInt(p[1])]+" "+p[0]+"</option>";
@@ -1559,7 +1558,6 @@ function doLoadMifraList(){
       if(sumCard) sumCard.style.display="none";
       return;
     }
-    // בנה סיכום לפי חודש → עובד
     var map={};
     rows.forEach(function(r){
       var ym=(r.date||"").substring(0,7);
@@ -1585,7 +1583,6 @@ function doLoadMifraList(){
     });
     if(sumEl) sumEl.innerHTML=sumHtml;
     if(sumCard) sumCard.style.display="block";
-    // רשימת מפרעות
     var out="";
     rows.forEach(function(r,i){
       var ymd=r.date||"";
@@ -1605,13 +1602,22 @@ function doAddMifra(){
   var note=document.getElementById("mifraNote").value.trim();
   var project=document.getElementById("mifraProject").value.trim();
   if(!name||!amount||!date){showToast("נא למלא שם, סכום ותאריך","var(--orange)");return;}
+  var btn=document.getElementById("addMifraBtn");
+  btn.disabled=true;
+  btn.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px;justify-content:center"><span style="width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span> מוסיף...</span>';
   apiCall('addMifra', {data:{name:name,amount:amount,date:date,note:note||"מפרעה",project:project}}, function(){
+    btn.disabled=false;
+    btn.innerHTML='✅ הוסף מפרעה';
     showToast("מפרעה נוספה ✅");
     document.getElementById("mifraAmount").value="";
     document.getElementById("mifraNote").value="";
     document.getElementById("mifraProject").value="";
     doLoadMifraList();
-  }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
+  }, function(e){
+    btn.disabled=false;
+    btn.innerHTML='✅ הוסף מפרעה';
+    showToast(e.message||"שגיאה","var(--red)");
+  });
 }
 
 function doDeleteMifra(idx){
@@ -1648,10 +1654,8 @@ function loadEmailLog(callback){
       var key = entry.worker + "_" + entry.month;
       _sentEmails[key] = { email: entry.email, time: entry.time, date: entry.date };
     });
-    console.log("לוג מיילים נטען:", JSON.stringify(_sentEmails));
-    console.log("keys:", Object.keys(_sentEmails));
     if(callback) callback();
-  }, function(e){ console.log("שגיאה בטעינת לוג:", e); if(callback) callback(); });
+  }, function(e){ if(callback) callback(); });
 }
 
 function loadWorkersForMonth(month){
@@ -1659,11 +1663,10 @@ function loadWorkersForMonth(month){
   var box = document.getElementById("workerCheckboxes");
   box.innerHTML = "<div style='display:flex;align-items:center;gap:10px;padding:12px;color:var(--text2);font-size:.85rem'>"
     + "<div style='width:18px;height:18px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0'></div>"
-    + "\u05d8\u05d5\u05e2\u05df \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05dc\u05d7\u05d5\u05d3\u05e9 " + month + "...</div>";
+    + "טוען עובדים לחודש " + month + "...</div>";
   apiCall('getWorkersByMonth', {month:month}, function(workers){
     _salWorkersList = workers || [];
     renderWorkerCheckboxes();
-    // לאחר רינדור — טען לוג מיילים ועדכן סטטוסים
     loadEmailLog(function(){
       _salWorkersList.forEach(function(w){
         var key = w + "_" + month;
@@ -1671,7 +1674,7 @@ function loadWorkersForMonth(month){
       });
     });
   }, function(){
-    box.innerHTML = "<div style='color:var(--red);padding:10px;font-size:.85rem'>\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d8\u05e2\u05d9\u05e0\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd</div>";
+    box.innerHTML = "<div style='color:var(--red);padding:10px;font-size:.85rem'>שגיאה בטעינת עובדים</div>";
   });
 }
 function renderWorkerCheckboxes(){
@@ -1687,7 +1690,6 @@ function renderWorkerCheckboxes(){
 }
 function checkExistingReports(month){
   if(!month) return;
-  // הצג "טוען..." על כל badge
   document.querySelectorAll(".salChk").forEach(function(chk){
     var label=chk.parentElement;
     var old=label.querySelector(".sal-badge"); if(old) old.remove();
@@ -1744,12 +1746,9 @@ function runNextSalary(month,btn){
       var fileName=w+"_"+month+".pdf";
       var wEmail = (function(n){ for(var i=0;i<rates.length;i++) if(rates[i].name===n) return rates[i].email||''; return ''; })(w);
       var safeW = w.replace(/'/g,"\\'");
-      var emailBtn = ''; // מטופל inline
       var attachBtn = '<label title="צרף תלוש" style="padding:5px 11px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:7px;font-size:.8rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px" id="attachLbl_'+w+'">'
         + '📎 תלוש<input type="file" accept=".pdf" style="display:none" onchange="attachPayslip(this,\''+safeW+'\')"></label>';
-      var attachStatus = '';
       btns+='<div style="padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:8px">'
-        // שורה עליונה: שם + כפתורי פעולה
         +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
         +'<span style="font-weight:700;font-size:1rem;color:var(--text1)">'+w+'</span>'
         +'<div style="display:flex;align-items:center;gap:6px">'
@@ -1758,7 +1757,6 @@ function runNextSalary(month,btn){
         +(wEmail ? '<button id="emailBtn_'+w+'" style="padding:5px 11px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:7px;font-size:.8rem;cursor:pointer" data-email="'+wEmail+'" data-name="'+w+'" data-month="'+month+'" onclick="confirmAndSend(this.dataset.email,this.dataset.name,this.dataset.month)" title="שלח מייל">📧</button>' : '')
         +'</div>'
         +'</div>'
-        // שורה תחתונה: סטטוס קבצים
         +'<div style="font-size:.75rem;color:var(--text2);display:flex;gap:12px;flex-wrap:wrap">'
         +'<span style="color:var(--accent)">📄 דוח נוכחות מוכן לשליחה</span>'
         +'<span id="attachStatus_'+w+'"></span>'
@@ -1768,16 +1766,14 @@ function runNextSalary(month,btn){
     });
     el.innerHTML="<div style='margin-bottom:12px;font-weight:700;color:var(--green)'>✅ הופקו "+_salDone.length+" דוחות:</div>"+btns;
     showToast("כל הדוחות הופקו ✅");
-    // הצג "טוען..." על כל שורה
     _salDone.forEach(function(w){
       var el = document.getElementById("emailStatus_" + w);
       if(el) el.innerHTML = '<span style="color:var(--text3);font-size:.75rem">⏳ בודק שליחות קודמות...</span>';
     });
-    // טען לוג מיילים ועדכן סטטוסים
     loadEmailLog(function(){
       _salDone.forEach(function(w){
         var el = document.getElementById("emailStatus_" + w);
-        if(el) el.innerHTML = ''; // נקה טוען
+        if(el) el.innerHTML = '';
         updateEmailStatus(w, month);
       });
     });
@@ -1795,7 +1791,6 @@ function runNextSalary(month,btn){
 
 var SS_ID = "1qfq6n2a5CINMEq4IOWG-nr_gf6-27pD9RJRDzCGN6Nk";
 function downloadSalaryPDF(sheetName, fileName){
-  // קבל את ה-GID של הגיליון ואז הורד
   apiCall('getSheetGid', {sheetName: sheetName}, function(gid){
     if(!gid){ showToast("הגיליון לא נמצא","var(--red)"); return; }
     var url="https://docs.google.com/spreadsheets/d/"+SS_ID+"/export?format=pdf"
@@ -1886,10 +1881,8 @@ function confirmDeleteWorker(){
 
 // ===== כרטיס עובד =====
 var _wcIndex = -1;
-
-
-// אחסון תלושים מצורפים לפי שם עובד
 var _payslips = {};
+var _workerPdfs = {}; // PDF פרטי עובד לפי שם
 var _sentEmails = {};
 
 function attachPayslip(input, workerName){
@@ -1941,7 +1934,6 @@ function updateEmailStatus(workerName, month){
 
 function confirmAndSend(email, workerName, month){
   var key = workerName + "_" + month;
-  console.log("confirmAndSend - key:", JSON.stringify(key), "exists:", !!_sentEmails[key], "all keys:", JSON.stringify(Object.keys(_sentEmails)));
   if(_sentEmails[key]){
     var s = _sentEmails[key];
     if(!confirm("מייל כבר נשלח ל-" + workerName + "\nבתאריך " + s.date + " בשעה " + s.time + ".\n\nלשלוח שוב?")) return;
@@ -2007,6 +1999,118 @@ function sendWorkerPDF(){
     showToast("PDF יורד + Gmail נפתח 📧");
   });
 }
+
+// ===== PDF פרטי עובד — שמירה בגוגל דרייב =====
+function openWorkerPdf(workerName) {
+  document.getElementById('workerPdfModalTitle').textContent = '📄 פרטי עובד — ' + workerName;
+  document.getElementById('workerPdfModalName').value = workerName;
+  var viewer = document.getElementById('workerPdfViewer');
+  var placeholder = document.getElementById('workerPdfPlaceholder');
+  var loadingEl = document.getElementById('workerPdfLoading');
+
+  // אם יש בזיכרון — הצג מיד
+  if (_workerPdfs[workerName]) {
+    viewer.src = _workerPdfs[workerName];
+    viewer.style.display = 'block';
+    placeholder.style.display = 'none';
+    if(loadingEl) loadingEl.style.display = 'none';
+    document.getElementById('workerPdfModal').style.display = 'flex';
+    return;
+  }
+
+  // אחרת — טען מדרייב
+  viewer.style.display = 'none';
+  placeholder.style.display = 'none';
+  if(loadingEl) loadingEl.style.display = 'flex';
+  document.getElementById('workerPdfModal').style.display = 'flex';
+
+  apiCall('getWorkerPdf', { workerName: workerName }, function(res) {
+    if(loadingEl) loadingEl.style.display = 'none';
+    if (res && res.ok && res.base64) {
+      var dataUrl = 'data:' + (res.mimeType || 'application/pdf') + ';base64,' + res.base64;
+      _workerPdfs[workerName] = dataUrl;
+      viewer.src = dataUrl;
+      viewer.style.display = 'block';
+      placeholder.style.display = 'none';
+      renderRates();
+    } else {
+      placeholder.style.display = 'flex';
+    }
+  }, function() {
+    if(loadingEl) loadingEl.style.display = 'none';
+    placeholder.style.display = 'flex';
+  });
+}
+
+function closeWorkerPdf() {
+  document.getElementById('workerPdfModal').style.display = 'none';
+}
+
+function handleWorkerPdfUpload(input) {
+  var file = input.files[0];
+  if (!file || file.type !== 'application/pdf') {
+    showToast('נא לבחור קובץ PDF', 'var(--red)');
+    return;
+  }
+  var workerName = document.getElementById('workerPdfModalName').value;
+  var viewer = document.getElementById('workerPdfViewer');
+  var placeholder = document.getElementById('workerPdfPlaceholder');
+  var loadingEl = document.getElementById('workerPdfLoading');
+
+  // הצג טוען
+  viewer.style.display = 'none';
+  placeholder.style.display = 'none';
+  if(loadingEl) loadingEl.style.display = 'flex';
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var dataUrl = e.target.result;
+    var base64 = dataUrl.split(',')[1];
+    var mimeType = file.type;
+
+    // שמור בדרייב
+    apiCall('saveWorkerPdf', { workerName: workerName, base64Data: base64, mimeType: mimeType }, function(res) {
+      if(loadingEl) loadingEl.style.display = 'none';
+      if (res && res.ok) {
+        _workerPdfs[workerName] = dataUrl;
+        viewer.src = dataUrl;
+        viewer.style.display = 'block';
+        placeholder.style.display = 'none';
+        renderRates();
+        showToast('PDF נשמר בדרייב ✅');
+      } else {
+        // fallback — שמור רק בזיכרון
+        _workerPdfs[workerName] = dataUrl;
+        viewer.src = dataUrl;
+        viewer.style.display = 'block';
+        placeholder.style.display = 'none';
+        renderRates();
+        showToast('PDF הועלה (לא נשמר בדרייב)', 'var(--orange)');
+      }
+    }, function() {
+      if(loadingEl) loadingEl.style.display = 'none';
+      // fallback
+      _workerPdfs[workerName] = dataUrl;
+      viewer.src = dataUrl;
+      viewer.style.display = 'block';
+      placeholder.style.display = 'none';
+      renderRates();
+      showToast('PDF הועלה (לא נשמר בדרייב)', 'var(--orange)');
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function downloadWorkerPdf() {
+  var workerName = document.getElementById('workerPdfModalName').value;
+  if (!_workerPdfs[workerName]) { showToast('אין PDF להורדה','var(--orange)'); return; }
+  var a = document.createElement('a');
+  a.href = _workerPdfs[workerName];
+  a.download = workerName + '_פרטים.pdf';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 </script>
 
 <script>
@@ -2061,9 +2165,60 @@ if ('serviceWorker' in navigator) {
     </div>
     <div style="display:flex;gap:10px;margin-top:18px">
       <button onclick="saveWorkerCard()" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:10px;padding:12px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial">💾 שמור</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== מודאל PDF פרטי עובד ===== -->
+<div id="workerPdfModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;justify-content:center;align-items:center;padding:16px" onclick="if(event.target===this)closeWorkerPdf()">
+  <div style="background:var(--bg2);border-radius:18px;width:100%;max-width:720px;max-height:90vh;display:flex;flex-direction:column;border:1px solid var(--border);box-shadow:0 30px 80px rgba(0,0,0,.7);overflow:hidden">
+
+    <!-- כותרת -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;flex-wrap:wrap">
+      <span id="workerPdfModalTitle" style="font-weight:800;font-size:1rem;color:var(--text1)">📄 פרטי עובד</span>
+      <input type="hidden" id="workerPdfModalName">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+
+        <!-- העלאה -->
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:rgba(167,139,250,.12);color:var(--purple);border:1.5px solid rgba(167,139,250,.45);border-radius:9px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial;transition:background .2s" onmouseover="this.style.background='rgba(167,139,250,.25)'" onmouseout="this.style.background='rgba(167,139,250,.12)'">
+          📤 העלה PDF
+          <input type="file" accept=".pdf" style="display:none" onchange="handleWorkerPdfUpload(this)">
+        </label>
+
+        <!-- הורדה -->
+        <button onclick="downloadWorkerPdf()" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:rgba(52,211,153,.1);color:var(--green);border:1.5px solid rgba(52,211,153,.4);border-radius:9px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial;transition:background .2s" onmouseover="this.style.background='rgba(52,211,153,.22)'" onmouseout="this.style.background='rgba(52,211,153,.1)'">⬇️ הורד</button>
+
+        <!-- סגור -->
+        <button onclick="closeWorkerPdf()" style="background:rgba(248,113,113,.1);border:1.5px solid rgba(248,113,113,.35);color:var(--red);border-radius:9px;padding:7px 13px;font-size:.9rem;cursor:pointer;font-weight:700;font-family:Heebo,Arial;transition:background .2s" onmouseover="this.style.background='rgba(248,113,113,.22)'" onmouseout="this.style.background='rgba(248,113,113,.1)'">✕</button>
+      </div>
+    </div>
+
+    <!-- תוכן -->
+    <div style="flex:1;overflow:hidden;position:relative;min-height:420px">
+
+      <!-- iframe צופה PDF -->
+      <iframe id="workerPdfViewer" style="display:none;width:100%;height:100%;border:none;min-height:500px"></iframe>
+
+      <!-- loading state -->
+      <div id="workerPdfLoading" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:420px;gap:16px">
+        <div style="width:44px;height:44px;border:3px solid rgba(79,142,247,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></div>
+        <div style="font-size:.88rem;color:var(--text3)">טוען PDF מהדרייב...</div>
+      </div>
+
+      <!-- placeholder לפני העלאה -->
+      <div id="workerPdfPlaceholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:420px;gap:14px;color:var(--text3);padding:30px">
+        <div style="font-size:4.5rem;opacity:.3;line-height:1">📄</div>
+        <div style="font-size:1rem;font-weight:700;color:var(--text2)">אין PDF מצורף עדיין</div>
+        <div style="font-size:.82rem;color:var(--text3);text-align:center">לחץ על "העלה PDF" כדי להוסיף קובץ פרטי העובד</div>
+        <label style="margin-top:6px;display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:var(--accent);color:#fff;border-radius:10px;font-size:.92rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial;border:none;transition:opacity .2s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+          📤 העלה PDF עכשיו
+          <input type="file" accept=".pdf" style="display:none" onchange="handleWorkerPdfUpload(this)">
+        </label>
+      </div>
 
     </div>
   </div>
 </div>
+
 </body>
 </html>
