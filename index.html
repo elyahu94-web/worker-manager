@@ -795,7 +795,7 @@ loadRates();
 apiCall('getWorkersPdfStatus', null, function(res) {
   if (res && res.names) {
     res.names.forEach(function(n) {
-      if (!workerPdfs[n]) workerPdfs[n] = '__pending__';
+      if (!_workerPdfs[n]) _workerPdfs[n] = '__pending__';
     });
     renderRates(); // צייר מחדש עם הכפתורות הירוקים
   }
@@ -2023,7 +2023,7 @@ function openWorkerPdf(workerName) {
   _refreshPdfEmailField(workerName);
 
   // אם יש בזיכרון — הצג מיד
-  if (workerPdfs[workerName] && workerPdfs[workerName] !== '__pending__') {
+  if (_workerPdfs[workerName] && _workerPdfs[workerName] !== '__pending__') {
     viewer.src = _workerPdfs[workerName];
     viewer.style.display = 'block';
     placeholder.style.display = 'none';
