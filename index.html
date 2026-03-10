@@ -1866,13 +1866,28 @@ function runNextSalary(month,btn){
 }
 
 function sendWhatsappWithPdf(workerName, phone, month) {
+  // אם התלוש עדיין נשמר בדרייב - חכה
+  if (_payslips[workerName] && _payslips[workerName].data && !_payslips[workerName].driveLink) {
+    showToast('ממתין לשמירת תלוש בדרייב...', 'var(--orange)');
+    var attempts = 0;
+    var check = setInterval(function() {
+      attempts++;
+      if (_payslips[workerName].driveLink || attempts > 20) {
+        clearInterval(check);
+        _doSendWhatsapp(workerName, phone, month);
+      }
+    }, 500);
+    return;
+  }
+  _doSendWhatsapp(workerName, phone, month);
+}
+
+function _doSendWhatsapp(workerName, phone, month) {
   showToast('מכין קישורים...', 'var(--accent)');
-  // קישור דוח נוכחות מהשיטס
   apiCall('getSheetGid', { sheetName: workerName + '_' + month }, function(gid) {
     var reportLink = gid
       ? 'https://docs.google.com/spreadsheets/d/' + SS_ID + '/export?format=pdf&gid=' + gid + '&portrait=true&fitw=true&sheetnames=false&pagenums=false&gridlines=false'
       : null;
-    // קישור תלוש מדרייב (אם קיים)
     var payslipLink = (_payslips[workerName] && _payslips[workerName].driveLink) || null;
     var text = 'שלום ' + workerName + ', דוח נוכחות לחודש ' + month;
     if (reportLink) text += '\n\n📊 דוח נוכחות:\n' + reportLink;
