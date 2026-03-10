@@ -1857,7 +1857,8 @@ function runNextSalary(month,btn){
   }
   var worker=_salPending.shift();
   btn.textContent="מכין "+worker+"... ("+(1+_salDone.length)+"/"+(_salPending.length+_salDone.length+1)+")";
-  apiCall('generateSalaryReport', {month:month,worker:worker}, function(){
+  apiCall('generateSalaryReport', {month:month,worker:worker}, function(res){
+    if(res && res.reportLink) { _reportLinks = _reportLinks||{}; _reportLinks[worker+'_'+month] = res.reportLink; }
     _salDone.push(worker); runNextSalary(month,btn);
   }, function(e){
     showToast("שגיאה ב"+worker+": "+(e.message||""),"var(--red)");
@@ -1883,22 +1884,12 @@ function sendWhatsappWithPdf(workerName, phone, month) {
 }
 
 function _doSendWhatsapp(workerName, phone, month) {
-  showToast('מכין קישורים...', 'var(--accent)');
-  apiCall('getSheetGid', { sheetName: workerName + '_' + month }, function(gid) {
-    var reportLink = gid
-      ? 'https://docs.google.com/spreadsheets/d/' + SS_ID + '/export?format=pdf&gid=' + gid + '&portrait=true&fitw=true&sheetnames=false&pagenums=false&gridlines=false'
-      : null;
-    var payslipLink = (_payslips[workerName] && _payslips[workerName].driveLink) || null;
-    var text = 'שלום ' + workerName + ', דוח נוכחות לחודש ' + month;
-    if (reportLink) text += '\n\n📊 דוח נוכחות:\n' + reportLink;
-    if (payslipLink) text += '\n\n📎 תלוש משכורת:\n' + payslipLink;
-    window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank');
-  }, function() {
-    var text = 'שלום ' + workerName + ', דוח נוכחות לחודש ' + month;
-    var payslipLink = (_payslips[workerName] && _payslips[workerName].driveLink) || null;
-    if (payslipLink) text += '\n\n📎 תלוש משכורת:\n' + payslipLink;
-    window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank');
-  });
+  var reportLink = (_reportLinks && _reportLinks[workerName+'_'+month]) || null;
+  var payslipLink = (_payslips[workerName] && _payslips[workerName].driveLink) || null;
+  var text = 'שלום ' + workerName + ', דוח נוכחות לחודש ' + month;
+  if (reportLink) text += '\n\n📊 דוח נוכחות:\n' + reportLink;
+  if (payslipLink) text += '\n\n📎 תלוש משכורת:\n' + payslipLink;
+  window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank');
 }
 
 function deleteAllReports(month, workers) {
@@ -2026,6 +2017,7 @@ function confirmDeleteWorker(){
 // ===== כרטיס עובד =====
 var _wcIndex = -1;
 var _payslips = {};
+var _reportLinks = {};
 var _workerPdfs = {}; // PDF פרטי עובד לפי שם
 var _workerEmails = {}; // אימייל לפי שם עובד (מהPDF)
 var _workerPhones = {}; // טלפון לפי שם עובד
