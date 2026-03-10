@@ -2112,6 +2112,12 @@ function _refreshPdfEmailField(workerName) {
   var _wr = rates.filter(function(r){return r.name===workerName;})[0];
   emailInp.value = (_wr && _wr.email) || _workerEmails[workerName] || '';
   if(phoneInp) phoneInp.value = (_wr && _wr.phone) || (_workerPhones && _workerPhones[workerName]) || '';
+  var ts = document.getElementById('pdfSaveTimestamp');
+  if(ts){
+    var saved = _wr && _wr.savedAt;
+    if(saved){ ts.style.display='block'; ts.textContent='🕐 נשמר לאחרונה: '+saved; }
+    else { ts.style.display='none'; ts.textContent=''; }
+  }
   emailRow.style.display = 'flex';
 }
 
@@ -2225,15 +2231,20 @@ function saveWorkerPdfData() {
   _workerPhones = _workerPhones || {};
   if(phoneVal) _workerPhones[workerName] = phoneVal;
   // עדכן rates ישירות
+  var _nowStr = new Date().toLocaleDateString('he-IL')+' '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
   for(var _i=0;_i<rates.length;_i++){
     if(rates[_i].name===workerName){
       rates[_i].email = emailVal;
       rates[_i].phone = phoneVal;
+      rates[_i].savedAt = _nowStr;
       break;
     }
   }
   // שמור לשיטס
   apiCall('saveWorkerRates', {rates: rates}, function(){}, function(){});
+  // עדכן חותמת זמן בחלונית
+  var ts = document.getElementById('pdfSaveTimestamp');
+  if(ts){ ts.style.display='block'; ts.textContent='🕐 נשמר לאחרונה: '+_nowStr; }
 
   var btn = document.getElementById('pdfSaveBtn');
   btn.disabled = true;
@@ -2265,6 +2276,8 @@ function saveWorkerPdfData() {
       showToast('נשמר בדרייב ✅');
       var st = document.getElementById('pdfSaveStatus');
       if(st){st.style.display='inline-block';st.style.background='rgba(52,211,153,.15)';st.style.color='var(--green)';st.style.border='1px solid rgba(52,211,153,.3)';st.textContent='✅ נשמר בדרייב!';}
+      var ts = document.getElementById('pdfSaveTimestamp');
+      if(ts){ var now=new Date(); ts.style.display='block'; ts.textContent='🕐 נשמר ב־'+now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); }
     } else {
       showToast('שגיאה בשמירה', 'var(--red)');
     }
@@ -2379,6 +2392,7 @@ if ('serviceWorker' in navigator) {
       </div>
       <button id="pdfSaveBtn" onclick="saveWorkerPdfData()" style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial">💾 שמור</button>
       <div id="pdfSaveStatus" style="display:none;align-self:center;padding:7px 16px;border-radius:8px;font-size:.85rem;font-weight:700;font-family:Heebo,Arial"></div>
+      <div id="pdfSaveTimestamp" style="width:100%;margin-top:4px;font-size:.75rem;color:var(--text3);text-align:left;direction:ltr;display:none"></div>
     </div>
 
     <!-- תוכן -->
