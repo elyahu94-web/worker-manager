@@ -463,6 +463,9 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
         <button onclick="addRate()" style="padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:1.1rem">➕</button>
       </div>
       <p class="hint" id="rateTypeHint">💡 הגדר תעריף לעובד — יומלא אוטומטית בייבוא רשימה</p><br>
+      <div style="margin-bottom:10px;position:relative">
+        <input id="workerSearch" type="text" placeholder="🔍 חפש עובד..." oninput="renderRates()" style="width:100%;padding:9px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;direction:rtl;color:var(--text1);font-size:.92rem;box-sizing:border-box">
+      </div>
       <div id="ratesList"></div><br>
       <button class="btn bo" onclick="saveRates()">💾 שמור סכומים לשיטס</button>
     </div>
@@ -717,11 +720,19 @@ function renderRates() {
     el.innerHTML = "<div class='loading'>אין סכומים קבועים עדיין</div>";
     return;
   }
+  var searchEl = document.getElementById("workerSearch");
+  var query = searchEl ? searchEl.value.trim().toLowerCase() : "";
+  var filtered = query ? rates.filter(function(r){ return r.name.toLowerCase().includes(query); }) : rates;
+  if (filtered.length === 0) {
+    el.innerHTML = "<div class='loading'>לא נמצאו עובדים עבור "" + query + ""</div>";
+    return;
+  }
   var html = "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px'>";
   html += "<label style='font-size:.8rem;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px'><input type='checkbox' id='chkAll' onchange='toggleAllWorkers(this.checked)' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent)'> בחר הכל</label>";
   html += "<button id='btnDeleteSelected' onclick='deleteSelectedWorkers()' style='display:none;background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3);border-radius:7px;padding:6px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial'>🗑️ הסר נבחרים</button>";
   html += "</div>";
-  rates.forEach(function(r, i) {
+  filtered.forEach(function(r, i) {
+    var origIdx = rates.indexOf(r);
     var isH = (r.rateType === "שעתי");
     var badge = isH
       ? "<span class='badge-yellow'>🕐 שעתי</span>"
@@ -733,15 +744,15 @@ function renderRates() {
     var pdfBtnText = hasPdf ? "✅ פרטי עובד" : "📄 פרטי עובד";
     html += "<div class='rrow'>";
     html += "<input type='checkbox' class='workerChk' data-name='"+r.name+"' onchange='updateDeleteBtn()' style='width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0'>";
-    html += "<input value='"+r.name+"' onchange='rates["+i+"].name=this.value' placeholder='שם' style='flex:3;min-width:100px'>";
+    html += "<input value='"+r.name+"' onchange='rates["+origIdx+"].name=this.value' placeholder='שם' style='flex:3;min-width:100px'>";
     if (isH) {
-      html += "<input type='number' value='"+(r.hourlyRate||0)+"' onchange='rates["+i+"].hourlyRate=this.value' placeholder='₪/שעה' style='flex:1;min-width:60px'>";
+      html += "<input type='number' value='"+(r.hourlyRate||0)+"' onchange='rates["+origIdx+"].hourlyRate=this.value' placeholder='₪/שעה' style='flex:1;min-width:60px'>";
     } else {
-      html += "<input type='number' value='"+(r.amount||0)+"' onchange='rates["+i+"].amount=this.value' placeholder='₪/יום' style='flex:1;min-width:60px'>";
+      html += "<input type='number' value='"+(r.amount||0)+"' onchange='rates["+origIdx+"].amount=this.value' placeholder='₪/יום' style='flex:1;min-width:60px'>";
     }
     html += badge;
     
-    html += "<button onclick=\"openWorkerPdf('"+r.name.replace(/'/g,"\\'")+"')\" class=\""+pdfBtnClass+"\" id=\"pdfBtn_"+i+"\">"+pdfBtnText+"</button>";
+    html += "<button onclick=\"openWorkerPdf('"+r.name.replace(/'/g,"\\'")+"')\" class=\""+pdfBtnClass+"\" id=\"pdfBtn_"+origIdx+"\">"+pdfBtnText+"</button>";
     html += "</div>";
   });
   el.innerHTML = html;
