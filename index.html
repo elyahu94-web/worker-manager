@@ -802,9 +802,15 @@ function addRate() {
 }
 
 function saveRates() {
+  var btn = document.querySelector('button[onclick="saveRates()"]');
+  if(btn){ btn.disabled=true; btn.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px;justify-content:center"><span style="width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span> שומר...</span>'; }
   apiCall('saveWorkerRates', {rates: rates}, function(){
+    if(btn){ btn.disabled=false; btn.innerHTML='💾 שמור סכומים לשיטס'; }
     showToast("נשמר בשיטס ✅");
-  }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
+  }, function(e){
+    if(btn){ btn.disabled=false; btn.innerHTML='💾 שמור סכומים לשיטס'; }
+    showToast(e.message||"שגיאה","var(--red)");
+  });
 }
 
 function loadRates() {
@@ -1683,9 +1689,15 @@ function doMifraReport(){
   var worker=document.getElementById("mifraReportWorker").value;
   var month=document.getElementById("mifraReportMonth").value;
   if(!month){showToast("נא לבחור חודש","var(--orange)");return;}
+  var btn=document.querySelector('button[onclick="doMifraReport()"]');
+  if(btn){ btn.disabled=true; btn.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px;justify-content:center"><span style="width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span> מכין דוח...</span>'; }
   apiCall('generateMifraReport', {month:month,worker:worker}, function(name){
+    if(btn){ btn.disabled=false; btn.innerHTML='📄 הוצא דוח מפרעות'; }
     showToast("דוח נוצר: "+name+" ✅");
-  }, function(e){ showToast(e.message||"שגיאה","var(--red)"); });
+  }, function(e){
+    if(btn){ btn.disabled=false; btn.innerHTML='📄 הוצא דוח מפרעות'; }
+    showToast(e.message||"שגיאה","var(--red)");
+  });
 }
 
 // ===== דוחות =====
@@ -2063,11 +2075,17 @@ function saveWorkerCard(){
   r.branch  = document.getElementById("wcBranch").value.trim();
   r.bankNum = document.getElementById("wcBankNum").value.trim();
   r.accountName = document.getElementById("wcAccountName").value.trim();
+  var btn = document.querySelector('button[onclick="saveWorkerCard()"]');
+  if(btn){ btn.disabled=true; btn.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px;justify-content:center"><span style="width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span> שומר...</span>'; }
   apiCall('saveWorkerRates', {rates: rates}, function(){
+    if(btn){ btn.disabled=false; btn.innerHTML='💾 שמור'; }
     showToast("פרטי " + r.name + " נשמרו ✅");
     renderRates();
     closeWorkerCard();
-  }, function(){ showToast("שגיאה בשמירה","var(--red)"); });
+  }, function(){
+    if(btn){ btn.disabled=false; btn.innerHTML='💾 שמור'; }
+    showToast("שגיאה בשמירה","var(--red)");
+  });
 }
 function sendWorkerPDF(){
   if(_wcIndex < 0) return;
