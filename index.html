@@ -791,6 +791,15 @@ function loadRates() {
   });
 }
 loadRates();
+// טען סטטוס PDFs מ-Drive
+apiCall('getWorkersPdfStatus', null, function(res) {
+  if (res && res.names) {
+    res.names.forEach(function(n) {
+      if (!workerPdfs[n]) workerPdfs[n] = '__pending__';
+    });
+    renderRates(); // צייר מחדש עם הכפתורות הירוקים
+  }
+});
 
 // ===== פרויקטים =====
 var _projects = [];
@@ -2014,7 +2023,7 @@ function openWorkerPdf(workerName) {
   _refreshPdfEmailField(workerName);
 
   // אם יש בזיכרון — הצג מיד
-  if (_workerPdfs[workerName]) {
+  if (workerPdfs[workerName] && workerPdfs[workerName] !== '__pending__') {
     viewer.src = _workerPdfs[workerName];
     viewer.style.display = 'block';
     placeholder.style.display = 'none';
