@@ -569,7 +569,8 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
           <span>בחר עובדים</span>
           <button onclick="toggleAllSalWorkers()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 12px;font-size:.75rem;cursor:pointer;font-family:'Heebo',Arial" id="btnSelectAllSal">בחר הכל</button>
         </label>
-        <div id="workerCheckboxes" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:4px;margin-top:8px;max-height:240px;overflow-y:auto"></div>
+        <input id="salWorkerSearch" type="text" placeholder="🔍 חפש עובד..." oninput="filterSalWorkers(this.value)" style="width:100%;margin-top:8px;padding:8px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;direction:rtl;color:var(--text1);font-size:.88rem;box-sizing:border-box">
+        <div id="workerCheckboxes" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:4px;margin-top:6px;max-height:240px;overflow-y:auto"></div>
       </div>
       <button class="btn bp" id="genSalBtn" onclick="generateSalaryUI()" style="margin-top:14px">💵 הכן דוחות</button>
       <div id="salResult" class="report-result"></div>
@@ -1778,6 +1779,15 @@ function checkExistingReports(month){
     });
   });
 }
+function filterSalWorkers(query) {
+  var q = query.trim().toLowerCase();
+  var month = document.getElementById("salMonth").value;
+  document.querySelectorAll(".worker-chk-label").forEach(function(label) {
+    var name = label.querySelector(".salChk").dataset.name;
+    label.style.display = (!q || name.toLowerCase().includes(q)) ? "" : "none";
+  });
+}
+
 function toggleAllSalWorkers(){
   var checkboxes=document.querySelectorAll(".salChk");
   var allChecked=Array.from(checkboxes).every(function(c){return c.checked;});
