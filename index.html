@@ -724,7 +724,7 @@ function renderRates() {
   var query = searchEl ? searchEl.value.trim().toLowerCase() : "";
   var filtered = query ? rates.filter(function(r){ return r.name.toLowerCase().includes(query); }) : rates;
   if (filtered.length === 0) {
-    el.innerHTML = "<div class='loading'>לא נמצאו עובדים עבור "" + query + ""</div>";
+    el.innerHTML = "<div class='loading'>לא נמצאו תוצאות עבור: " + query + "</div>";
     return;
   }
   var html = "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px'>";
