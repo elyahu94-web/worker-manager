@@ -1867,19 +1867,23 @@ function runNextSalary(month,btn){
 }
 
 function sendWhatsappWithPdf(workerName, phone, month) {
-  showToast('מכין קישור...', 'var(--accent)');
-  apiCall('getPublicPdfLink', { workerName: workerName }, function(res) {
-    if (!res || !res.ok) {
-      // אין PDF - שלח וואטסאפ בלי קישור
-      var msg = encodeURIComponent('שלום ' + workerName + ', דוח נוכחות לחודש ' + month);
-      window.open('https://wa.me/' + phone + '?text=' + msg, '_blank');
-      return;
-    }
-    var msg = encodeURIComponent('שלום ' + workerName + ', דוח נוכחות לחודש ' + month + ':\n' + res.link);
-    window.open('https://wa.me/' + phone + '?text=' + msg, '_blank');
+  showToast('מכין קישורים...', 'var(--accent)');
+  // קישור דוח נוכחות מהשיטס
+  apiCall('getSheetGid', { sheetName: workerName + '_' + month }, function(gid) {
+    var reportLink = gid
+      ? 'https://docs.google.com/spreadsheets/d/' + SS_ID + '/export?format=pdf&gid=' + gid + '&portrait=true&fitw=true&sheetnames=false&pagenums=false&gridlines=false'
+      : null;
+    // קישור תלוש מדרייב (אם קיים)
+    var payslipLink = (_payslips[workerName] && _payslips[workerName].driveLink) || null;
+    var text = 'שלום ' + workerName + ', דוח נוכחות לחודש ' + month;
+    if (reportLink) text += '\n\n📊 דוח נוכחות:\n' + reportLink;
+    if (payslipLink) text += '\n\n📎 תלוש משכורת:\n' + payslipLink;
+    window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank');
   }, function() {
-    var msg = encodeURIComponent('שלום ' + workerName + ', דוח נוכחות לחודש ' + month);
-    window.open('https://wa.me/' + phone + '?text=' + msg, '_blank');
+    var text = 'שלום ' + workerName + ', דוח נוכחות לחודש ' + month;
+    var payslipLink = (_payslips[workerName] && _payslips[workerName].driveLink) || null;
+    if (payslipLink) text += '\n\n📎 תלוש משכורת:\n' + payslipLink;
+    window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank');
   });
 }
 
@@ -2007,12 +2011,24 @@ function attachPayslip(input, workerName){
   if(!file) return;
   var reader = new FileReader();
   reader.onload = function(e){
-    _payslips[workerName] = { name: file.name, data: e.target.result };
+    var dataUrl = e.target.result;
+    _payslips[workerName] = { name: file.name, data: dataUrl };
     var status = document.getElementById("attachStatus_" + workerName);
     var lbl = document.getElementById("attachLbl_" + workerName);
-    if(status) status.innerHTML = '<span style="color:var(--green)">📎 ' + file.name + ' מצורף לשליחה</span>';
-    if(lbl) { lbl.title = "החלף קובץ: " + file.name; lbl.style.borderColor = "var(--green)"; lbl.style.color = "var(--green)"; }
-    showToast("תלוש צורף ל-" + workerName + " ✅", "var(--green)");
+    if(status) status.innerHTML = '<span style="color:var(--accent)">⏳ שומר תלוש בדרייב...</span>';
+    if(lbl) { lbl.style.borderColor = "var(--accent)"; lbl.style.color = "var(--accent)"; }
+    // שמור לדרייב
+    var base64 = dataUrl.split(',')[1];
+    apiCall('savePayslipToDrive', { workerName: workerName, base64Data: base64, mimeType: 'application/pdf' }, function(res) {
+      if(res && res.ok) _payslips[workerName].driveLink = res.link;
+      if(status) status.innerHTML = '<span style="color:var(--green)">📎 ' + file.name + ' מצורף' + (res&&res.ok?' ✅':'') + '</span>';
+      if(lbl) { lbl.title = "החלף קובץ: " + file.name; lbl.style.borderColor = "var(--green)"; lbl.style.color = "var(--green)"; }
+      showToast("תלוש צורף ל-" + workerName + " ✅", "var(--green)");
+    }, function() {
+      if(status) status.innerHTML = '<span style="color:var(--green)">📎 ' + file.name + ' מצורף</span>';
+      if(lbl) { lbl.title = "החלף קובץ: " + file.name; lbl.style.borderColor = "var(--green)"; lbl.style.color = "var(--green)"; }
+      showToast("תלוש צורף ל-" + workerName + " ✅", "var(--green)");
+    });
   };
   reader.readAsDataURL(file);
 }
