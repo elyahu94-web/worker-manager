@@ -1807,7 +1807,7 @@ function runNextSalary(month,btn){
         +'<button style="padding:5px 11px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:7px;font-size:.8rem;cursor:pointer" data-sheet="'+sheetName+'" data-file="'+fileName+'" onclick="downloadSalaryPDF(this.dataset.sheet,this.dataset.file)" title="הורד דוח נוכחות">⬇️ דוח נוכחות</button>'
         +attachBtn
         +(wEmail ? '<button id="emailBtn_'+w+'" style="padding:5px 11px;background:rgba(79,142,247,.15);color:var(--accent);border:1px solid var(--accent);border-radius:7px;font-size:.8rem;cursor:pointer" data-email="'+wEmail+'" data-name="'+w+'" data-month="'+month+'" onclick="confirmAndSend(this.dataset.email,this.dataset.name,this.dataset.month)" title="שלח מייל לـ'+wEmail+'">📧 מייל</button>' : '<button disabled style="padding:5px 11px;background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:7px;font-size:.8rem;cursor:not-allowed;opacity:.4" title="אין אימייל שמור">📧 מייל</button>')
-        +(function(){ var p=_workerPhones[w]||(function(n){ for(var i=0;i<rates.length;i++) if(rates[i].name===n) return rates[i].phone||''; return ''; })(w); var wp=p?p.replace(/[^0-9]/g,''):''; if(wp.startsWith('0')) wp='972'+wp.slice(1); return p ? '<button style="padding:5px 11px;background:rgba(37,211,102,.15);color:#25d366;border:1px solid #25d366;border-radius:7px;font-size:.8rem;cursor:pointer" onclick="window.open(\'https://wa.me/'+wp+'\',\'_blank\')" title="וואטסאפ לـ'+p+'">💬 וואטסאפ</button>' : '<button disabled style="padding:5px 11px;background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:7px;font-size:.8rem;cursor:not-allowed;opacity:.4" title="אין טלפון שמור">💬 וואטסאפ</button>'; })()
+        +(function(){ var p=_workerPhones[w]||(function(n){ for(var i=0;i<rates.length;i++) if(rates[i].name===n) return rates[i].phone||''; return ''; })(w); var wp=p?p.replace(/[^0-9]/g,''):''; if(wp.startsWith('0')) wp='972'+wp.slice(1); var sw=w.replace(/'/g,"\\'"); return p ? '<button style="padding:5px 11px;background:rgba(37,211,102,.15);color:#25d366;border:1px solid #25d366;border-radius:7px;font-size:.8rem;cursor:pointer" onclick="sendWhatsappWithPdf(\''+sw+'\',\''+wp+'\',\''+month+'\')" title="שלח וואטסאפ עם קישור PDF">💬 וואטסאפ</button>' : '<button disabled style="padding:5px 11px;background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:7px;font-size:.8rem;cursor:not-allowed;opacity:.4" title="אין טלפון שמור">💬 וואטסאפ</button>'; })()
         +'</div>'
         +'</div>'
         +'<div style="font-size:.75rem;color:var(--text2);display:flex;gap:12px;flex-wrap:wrap">'
@@ -1841,6 +1841,23 @@ function runNextSalary(month,btn){
   }, function(e){
     showToast("שגיאה ב"+worker+": "+(e.message||""),"var(--red)");
     runNextSalary(month,btn);
+  });
+}
+
+function sendWhatsappWithPdf(workerName, phone, month) {
+  showToast('מכין קישור...', 'var(--accent)');
+  apiCall('getPublicPdfLink', { workerName: workerName }, function(res) {
+    if (!res || !res.ok) {
+      // אין PDF - שלח וואטסאפ בלי קישור
+      var msg = encodeURIComponent('שלום ' + workerName + ', דוח נוכחות לחודש ' + month);
+      window.open('https://wa.me/' + phone + '?text=' + msg, '_blank');
+      return;
+    }
+    var msg = encodeURIComponent('שלום ' + workerName + ', דוח נוכחות לחודש ' + month + ':\n' + res.link);
+    window.open('https://wa.me/' + phone + '?text=' + msg, '_blank');
+  }, function() {
+    var msg = encodeURIComponent('שלום ' + workerName + ', דוח נוכחות לחודש ' + month);
+    window.open('https://wa.me/' + phone + '?text=' + msg, '_blank');
   });
 }
 
