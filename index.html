@@ -1883,6 +1883,8 @@ function confirmDeleteWorker(){
 var _wcIndex = -1;
 var _payslips = {};
 var _workerPdfs = {}; // PDF פרטי עובד לפי שם
+var _workerEmails = {}; // אימייל לפי שם עובד (מהPDF)
+var _workerPhones = {}; // טלפון לפי שם עובד
 var _sentEmails = {};
 
 function attachPayslip(input, workerName){
@@ -2008,6 +2010,9 @@ function openWorkerPdf(workerName) {
   var placeholder = document.getElementById('workerPdfPlaceholder');
   var loadingEl = document.getElementById('workerPdfLoading');
 
+  // עדכן שדה אימייל
+  _refreshPdfEmailField(workerName);
+
   // אם יש בזיכרון — הצג מיד
   if (_workerPdfs[workerName]) {
     viewer.src = _workerPdfs[workerName];
@@ -2029,6 +2034,9 @@ function openWorkerPdf(workerName) {
     if (res && res.ok && res.base64) {
       var dataUrl = 'data:' + (res.mimeType || 'application/pdf') + ';base64,' + res.base64;
       _workerPdfs[workerName] = dataUrl;
+      if(res.email) _workerEmails[workerName] = res.email;
+      if(res.phone) _workerPhones[workerName] = res.phone;
+      if(res.email || res.phone) _refreshPdfEmailField(workerName);
       viewer.src = dataUrl;
       viewer.style.display = 'block';
       placeholder.style.display = 'none';
@@ -2042,7 +2050,85 @@ function openWorkerPdf(workerName) {
   });
 }
 
+function _refreshPdfEmailField(workerName) {
+  var emailRow = document.getElementById('pdfEmailRow');
+  var emailInp = document.getElementById('pdfEmailInput');
+  var phoneInp = document.getElementById('pdfPhoneInput');
+  if(!emailRow || !emailInp) return;
+  emailInp.value = _workerEmails[workerName] || '';
+  if(phoneInp) phoneInp.value = _workerPhones[workerName] || '';
+  emailRow.style.display = 'flex';
+}
+
+function sendPdfEmail() {
+  var workerName = document.getElementById('workerPdfModalName').value;
+  var email = document.getElementById('pdfEmailInput').value.trim();
+  if(!email) { showToast('הכנס כתובת אימייל', 'var(--orange)'); return; }
+  if(!_workerPdfs[workerName]) { showToast('אין PDF לשליחה', 'var(--orange)'); return; }
+
+  // שמור אימייל
+  _workerEmails[workerName] = email;
+  apiCall('saveWorkerPdfEmail', { workerName: workerName, email: email }, function(){}, function(){});
+
+  // שלח
+  var sendBtn = document.getElementById('pdfSendBtn');
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span> שולח...</span>';
+
+  var month = document.getElementById('salMonth') ? document.getElementById('salMonth').value : '';
+  var payslip = { name: workerName + '_פרטים.pdf', data: _workerPdfs[workerName] };
+  var payload = { workerName: workerName, month: month || 'general', email: email, payslip: payslip };
+
+  apiCall('sendSalaryEmail', payload, function(res) {
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = '📧 שלח למייל';
+    if(res === 'נשלח ✅') {
+      showToast('נשלח ל-' + email + ' ✅', 'var(--green)');
+    } else {
+      showToast(res || 'שגיאה בשליחה', 'var(--red)');
+    }
+  }, function(e) {
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = '📧 שלח למייל';
+    showToast('שגיאה: ' + (e.message||''), 'var(--red)');
+  });
+}
+
+function sendPdfWhatsapp() {
+  var workerName = document.getElementById('workerPdfModalName').value;
+  var phone = document.getElementById('pdfPhoneInput').value.trim().replace(/[^0-9]/g,'');
+  if(!phone) { showToast('הכנס מספר טלפון', 'var(--orange)'); return; }
+  if(!_workerPdfs[workerName]) { showToast('אין PDF לשליחה', 'var(--orange)'); return; }
+
+  // שמור טלפון
+  _workerPhones = _workerPhones || {};
+  _workerPhones[workerName] = phone;
+  apiCall('saveWorkerPdfEmail', { workerName: workerName, email: document.getElementById('pdfEmailInput').value.trim(), phone: phone }, function(){}, function(){});
+
+  // המר לפורמט ישראלי בינלאומי
+  if (phone.startsWith('0')) phone = '972' + phone.substring(1);
+
+  // קישור להורדת ה-PDF
+  var a = document.createElement('a');
+  a.href = _workerPdfs[workerName];
+  a.download = workerName + '_פרטים.pdf';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+  // פתח וואטסאפ אחרי שנייה
+  setTimeout(function(){
+    var msg = encodeURIComponent('שלום, מצורף קובץ פרטי עובד — ' + workerName + '\nאנא שמור את הקובץ שהורד.');
+    window.open('https://wa.me/' + phone + '?text=' + msg, '_blank');
+    showToast('וואטסאפ נפתח + PDF מוריד ✅', 'var(--green)');
+  }, 600);
+}
+
 function closeWorkerPdf() {
+  var workerName = document.getElementById('workerPdfModalName').value;
+  var email = document.getElementById('pdfEmailInput') ? document.getElementById('pdfEmailInput').value.trim() : '';
+  var phone = document.getElementById('pdfPhoneInput') ? document.getElementById('pdfPhoneInput').value.trim() : '';
+  if (!email && !phone) {
+    if (!confirm('⚠️ חשוב להזין מייל או טלפון אליו נשלחים הדוחות\n\nהאם אתה בטוח שברצונך להמשיך ללא פרטי קשר?')) return;
+  }
   document.getElementById('workerPdfModal').style.display = 'none';
 }
 
@@ -2068,8 +2154,10 @@ function handleWorkerPdfUpload(input) {
     var base64 = dataUrl.split(',')[1];
     var mimeType = file.type;
 
-    // שמור בדרייב
-    apiCall('saveWorkerPdf', { workerName: workerName, base64Data: base64, mimeType: mimeType }, function(res) {
+    // שמור בדרייב (כולל אימייל אם הוזן)
+    var emailVal = document.getElementById('pdfEmailInput') ? document.getElementById('pdfEmailInput').value.trim() : '';
+    if(emailVal) _workerEmails[workerName] = emailVal;
+    apiCall('saveWorkerPdf', { workerName: workerName, base64Data: base64, mimeType: mimeType, email: emailVal }, function(res) {
       if(loadingEl) loadingEl.style.display = 'none';
       if (res && res.ok) {
         _workerPdfs[workerName] = dataUrl;
@@ -2190,6 +2278,22 @@ if ('serviceWorker' in navigator) {
 
         <!-- סגור -->
         <button onclick="closeWorkerPdf()" style="background:rgba(248,113,113,.1);border:1.5px solid rgba(248,113,113,.35);color:var(--red);border-radius:9px;padding:7px 13px;font-size:.9rem;cursor:pointer;font-weight:700;font-family:Heebo,Arial;transition:background .2s" onmouseover="this.style.background='rgba(248,113,113,.22)'" onmouseout="this.style.background='rgba(248,113,113,.1)'">✕</button>
+      </div>
+    </div>
+
+    <!-- שורת אימייל + שליחה -->
+    <div id="pdfEmailRow" style="padding:12px 20px;background:rgba(79,142,247,.05);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:8px">
+      <!-- שורת מייל -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:.8rem;font-weight:600;color:var(--text2);white-space:nowrap;width:22px">📧</span>
+        <input id="pdfEmailInput" type="email" placeholder="אימייל לשליחה (אופציונלי אם יש וואטסאפ)..." style="flex:1;min-width:160px;padding:7px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;font-family:Heebo,Arial;color:var(--text1);direction:ltr" oninput="var w=document.getElementById('workerPdfModalName').value; if(w) _workerEmails[w]=this.value.trim()">
+        <button id="pdfSendBtn" onclick="sendPdfEmail()" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial;white-space:nowrap">📧 שלח מייל</button>
+      </div>
+      <!-- שורת טלפון / וואטסאפ -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:.8rem;font-weight:600;color:var(--text2);white-space:nowrap;width:22px">📱</span>
+        <input id="pdfPhoneInput" type="tel" placeholder="טלפון לשליחה בוואטסאפ (אופציונלי אם יש מייל)..." style="flex:1;min-width:160px;padding:7px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;font-family:Heebo,Arial;color:var(--text1);direction:ltr" oninput="var w=document.getElementById('workerPdfModalName').value; if(w){_workerPhones=_workerPhones||{};_workerPhones[w]=this.value.trim();}">
+        <button onclick="sendPdfWhatsapp()" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:#25d366;color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial;white-space:nowrap">📲 שלח וואטסאפ</button>
       </div>
     </div>
 
