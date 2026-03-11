@@ -2313,39 +2313,84 @@ function closeWorkerPdf() {
   document.getElementById('workerPdfModal').style.display = 'none';
 }
 
+// ===== PDF.js globals =====
+var _pdfDoc = null;
+var _pdfCurrentPage = 1;
+var _pdfTotalPages = 0;
+
+function pdfPrevPage() {
+  if (_pdfCurrentPage <= 1) return;
+  _pdfCurrentPage--;
+  _renderPdfPage(_pdfCurrentPage);
+}
+function pdfNextPage() {
+  if (_pdfCurrentPage >= _pdfTotalPages) return;
+  _pdfCurrentPage++;
+  _renderPdfPage(_pdfCurrentPage);
+}
+function _updatePdfNav() {
+  var el = document.getElementById('pdfPageInfo');
+  var prev = document.getElementById('pdfPrevBtn');
+  var next = document.getElementById('pdfNextBtn');
+  var nav = document.getElementById('pdfNavBar');
+  if (el) el.textContent = 'עמוד ' + _pdfCurrentPage + ' מתוך ' + _pdfTotalPages;
+  if (prev) prev.disabled = _pdfCurrentPage <= 1;
+  if (next) next.disabled = _pdfCurrentPage >= _pdfTotalPages;
+  if (nav) nav.style.display = _pdfTotalPages > 1 ? 'flex' : 'none';
+}
+
+function _renderPdfPage(pageNum) {
+  if (!_pdfDoc) return;
+  _pdfDoc.getPage(pageNum).then(function(page) {
+    var container = document.getElementById('pdfCanvasContainer');
+    var old = document.getElementById('pdfMainCanvas');
+    if (old) old.remove();
+    var canvas = document.createElement('canvas');
+    canvas.id = 'pdfMainCanvas';
+    canvas.style.maxWidth = '100%';
+    canvas.style.borderRadius = '4px';
+    canvas.style.display = 'block';
+    container.appendChild(canvas);
+    var containerWidth = container.offsetWidth || 680;
+    var viewport = page.getViewport({scale: 1});
+    var scale = Math.min((containerWidth - 24) / viewport.width, 3);
+    var sv = page.getViewport({scale: scale});
+    canvas.width = sv.width;
+    canvas.height = sv.height;
+    page.render({canvasContext: canvas.getContext('2d'), viewport: sv});
+    _updatePdfNav();
+  });
+}
+
+function _loadPdfJs(callback) {
+  if (typeof pdfjsLib !== 'undefined') { callback(); return; }
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  s.onload = function() {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    callback();
+  };
+  document.head.appendChild(s);
+}
+
 function _showPdfBlob(blob, workerName) {
-  var blobUrl = URL.createObjectURL(blob);
   var viewer = document.getElementById('workerPdfViewer');
   var placeholder = document.getElementById('workerPdfPlaceholder');
   var loadingEl = document.getElementById('workerPdfLoading');
-  var obj = document.getElementById('workerPdfObject');
-  var fallback = document.getElementById('workerPdfMobileFallback');
-  var openLink = document.getElementById('workerPdfOpenLink');
+  if (loadingEl) loadingEl.style.display = 'none';
+  if (placeholder) placeholder.style.display = 'none';
 
-  if(loadingEl) loadingEl.style.display = 'none';
-  if(placeholder) placeholder.style.display = 'none';
-
-  // Set open link always
-  if(openLink) openLink.href = blobUrl;
-
-  // Try object tag; detect mobile where it won't work
-  var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  if (isMobile) {
-    // On mobile — show fallback with open link
-    if(obj) obj.style.display = 'none';
-    if(fallback) fallback.style.display = 'flex';
-  } else {
-    // Desktop — use object tag
-    obj.data = blobUrl;
-    if(obj) obj.style.display = 'block';
-    if(fallback) fallback.style.display = 'none';
-    // If object fails to load (some browsers), show fallback after 2s
-    obj.onerror = function() {
-      obj.style.display = 'none';
-      if(fallback) fallback.style.display = 'flex';
-    };
-  }
-  viewer.style.display = 'block';
+  _loadPdfJs(function() {
+    blob.arrayBuffer().then(function(buf) {
+      pdfjsLib.getDocument({data: buf}).promise.then(function(pdf) {
+        _pdfDoc = pdf;
+        _pdfTotalPages = pdf.numPages;
+        _pdfCurrentPage = 1;
+        viewer.style.display = 'block';
+        _renderPdfPage(1);
+      });
+    });
+  });
 }
 
 function handleWorkerPdfUpload(input) {
@@ -2554,17 +2599,16 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <!-- תוכן -->
-    <div style="flex:1;overflow:hidden;position:relative;min-height:420px">
+    <div style="flex:1;overflow-y:auto;position:relative;min-height:420px;background:#525659">
 
-      <!-- PDF viewer — עובד בנייד ובדסקטופ -->
-      <div id="workerPdfViewer" style="display:none;width:100%;height:100%;min-height:500px;position:relative">
-        <object id="workerPdfObject" type="application/pdf" style="width:100%;height:100%;min-height:500px;border:none"></object>
-        <!-- fallback לנייד -->
-        <div id="workerPdfMobileFallback" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:420px;gap:16px;padding:24px;text-align:center">
-          <div style="font-size:3.5rem">📄</div>
-          <div style="font-weight:700;font-size:1rem;color:var(--text1)">PDF מוכן לצפייה</div>
-          <div style="font-size:.82rem;color:var(--text3)">לחץ לפתיחת הקובץ</div>
-          <a id="workerPdfOpenLink" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:13px 28px;background:var(--accent);color:#fff;border-radius:10px;font-size:.95rem;font-weight:700;text-decoration:none">📂 פתח PDF</a>
+      <!-- PDF.js canvas viewer — ללא sidebar, עובד בנייד ודסקטופ -->
+      <div id="workerPdfViewer" style="display:none;width:100%;padding:12px 0;box-sizing:border-box">
+        <div id="pdfCanvasContainer" style="display:flex;flex-direction:column;align-items:center;gap:10px"></div>
+        <!-- ניווט עמודים -->
+        <div id="pdfNavBar" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;flex-wrap:wrap">
+          <button onclick="pdfPrevPage()" id="pdfPrevBtn" style="padding:7px 18px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;font-family:Heebo,Arial;font-size:.88rem;cursor:pointer">◀ הקודם</button>
+          <span id="pdfPageInfo" style="color:#eee;font-size:.88rem;font-family:Heebo,Arial;min-width:90px;text-align:center"></span>
+          <button onclick="pdfNextPage()" id="pdfNextBtn" style="padding:7px 18px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;font-family:Heebo,Arial;font-size:.88rem;cursor:pointer">הבא ▶</button>
         </div>
       </div>
 
