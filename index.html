@@ -2174,6 +2174,13 @@ function openWorkerPdf(workerName) {
   var placeholder = document.getElementById('workerPdfPlaceholder');
   var loadingEl = document.getElementById('workerPdfLoading');
 
+  // נקה canvas ישן + אפס מצב PDF
+  _pdfDoc = null; _pdfCurrentPage = 1; _pdfTotalPages = 0;
+  var oldCanvas = document.getElementById('pdfMainCanvas');
+  if (oldCanvas) oldCanvas.remove();
+  viewer.style.display = 'none';
+  if (placeholder) placeholder.style.display = 'none';
+
   // עדכן שדה אימייל
   _refreshPdfEmailField(workerName);
 
