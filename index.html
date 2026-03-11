@@ -2175,9 +2175,7 @@ function openWorkerPdf(workerName) {
   var loadingEl = document.getElementById('workerPdfLoading');
 
   // נקה canvas ישן + אפס מצב PDF
-  _pdfDoc = null; _pdfCurrentPage = 1; _pdfTotalPages = 0;
-  var oldCanvas = document.getElementById('pdfMainCanvas');
-  if (oldCanvas) oldCanvas.remove();
+  _pdfGlobalsReset();
   viewer.style.display = 'none';
   if (placeholder) placeholder.style.display = 'none';
 
@@ -2320,33 +2318,81 @@ function closeWorkerPdf() {
   document.getElementById('workerPdfModal').style.display = 'none';
 }
 
+function _pdfGlobalsReset() {
+  if(window._pdfDoc) { try { window._pdfDoc.destroy(); } catch(e){} }
+  window._pdfDoc = null;
+  window._pdfCurrentPage = 1;
+  window._pdfTotalPages = 0;
+  window._pdfRenderToken = (window._pdfRenderToken || 0) + 1;
+  var c = document.getElementById('pdfCanvasContainer');
+  if(c) c.innerHTML = '';
+}
+function pdfPrevPage() {
+  if((window._pdfCurrentPage||1) <= 1) return;
+  window._pdfCurrentPage--;
+  _renderPdfPageNow(window._pdfCurrentPage);
+}
+function pdfNextPage() {
+  if((window._pdfCurrentPage||1) >= (window._pdfTotalPages||1)) return;
+  window._pdfCurrentPage++;
+  _renderPdfPageNow(window._pdfCurrentPage);
+}
+function _renderPdfPageNow(pageNum) {
+  var pdf = window._pdfDoc;
+  if(!pdf) return;
+  var token = window._pdfRenderToken;
+  pdf.getPage(pageNum).then(function(page) {
+    if(token !== window._pdfRenderToken) return;
+    var container = document.getElementById('pdfCanvasContainer');
+    if(!container) return;
+    container.innerHTML = '';
+    var canvas = document.createElement('canvas');
+    canvas.style.maxWidth='100%';canvas.style.display='block';canvas.style.borderRadius='4px';
+    container.appendChild(canvas);
+    var w = container.offsetWidth || 680;
+    var vp0 = page.getViewport({scale:1});
+    var scale = Math.min((w-24)/vp0.width, 3);
+    var vp = page.getViewport({scale:scale});
+    canvas.width = vp.width; canvas.height = vp.height;
+    page.render({canvasContext:canvas.getContext('2d'),viewport:vp});
+    var el=document.getElementById('pdfPageInfo');
+    var nav=document.getElementById('pdfNavBar');
+    if(el) el.textContent='עמוד '+pageNum+' מתוך '+window._pdfTotalPages;
+    if(nav) nav.style.display=(window._pdfTotalPages>1)?'flex':'none';
+    var prev=document.getElementById('pdfPrevBtn');
+    var next=document.getElementById('pdfNextBtn');
+    if(prev) prev.disabled=(pageNum<=1);
+    if(next) next.disabled=(pageNum>=(window._pdfTotalPages||1));
+  });
+}
 function _showPdfBlob(blob, workerName) {
-  var blobUrl = URL.createObjectURL(blob);
+  _pdfGlobalsReset();
+  var token = window._pdfRenderToken;
   var viewer = document.getElementById('workerPdfViewer');
   var placeholder = document.getElementById('workerPdfPlaceholder');
   var loadingEl = document.getElementById('workerPdfLoading');
-  var obj = document.getElementById('workerPdfObject');
-  var fallback = document.getElementById('workerPdfMobileFallback');
-  var openLink = document.getElementById('workerPdfOpenLink');
-  var deleteBtn = document.getElementById('pdfDeleteBtn');
-
-  if (loadingEl) loadingEl.style.display = 'none';
-  if (placeholder) placeholder.style.display = 'none';
-  if (openLink) openLink.href = blobUrl;
-  if (deleteBtn) deleteBtn.style.display = 'inline-flex';
-
-  var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  if (isMobile) {
-    if (obj) obj.style.display = 'none';
-    if (fallback) fallback.style.display = 'flex';
-  } else {
-    // navpanes=0 מסיר את החלונית הממוזערת של Chrome
-    obj.data = blobUrl + '#navpanes=0&toolbar=1&view=FitH';
-    if (obj) obj.style.display = 'block';
-    if (fallback) fallback.style.display = 'none';
+  if(loadingEl) loadingEl.style.display='none';
+  if(placeholder) placeholder.style.display='none';
+  function doLoad() {
+    blob.arrayBuffer().then(function(buf) {
+      if(token !== window._pdfRenderToken) return;
+      pdfjsLib.getDocument({data: buf}).promise.then(function(pdf) {
+        if(token !== window._pdfRenderToken) return;
+        window._pdfDoc = pdf;
+        window._pdfTotalPages = pdf.numPages;
+        window._pdfCurrentPage = 1;
+        if(viewer) viewer.style.display='block';
+        _renderPdfPageNow(1);
+      });
+    });
   }
-  viewer.style.display = 'block';
+  if(typeof pdfjsLib !== 'undefined') { doLoad(); return; }
+  var s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  s.onload=function(){ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; doLoad(); };
+  document.head.appendChild(s);
 }
+
 
 function deleteWorkerPdf() {
   var workerName = document.getElementById('workerPdfModalName').value;
