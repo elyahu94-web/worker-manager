@@ -2304,6 +2304,30 @@ function closeWorkerPdf() {
 var _pdfDoc = null;
 var _pdfCurrentPage = 1;
 var _pdfTotalPages = 0;
+var _pdfScale = 1;
+
+// inject text-layer CSS once
+(function(){
+  var s = document.createElement('style');
+  s.textContent = [
+    '#pdfTextLayer {',
+    '  position:absolute;top:0;left:0;right:0;bottom:0;',
+    '  overflow:hidden;opacity:0.25;line-height:1;',
+    '  -webkit-text-size-adjust:none;',
+    '}',
+    '#pdfTextLayer span {',
+    '  color:transparent;',
+    '  position:absolute;',
+    '  white-space:pre;',
+    '  cursor:text;',
+    '  transform-origin:0% 0%;',
+    '  -webkit-user-select:text;user-select:text;',
+    '}',
+    '#pdfTextLayer ::selection { background:rgba(0,100,255,0.3); }',
+    '#pdfPageWrap { display:block; margin:0 auto; line-height:0; }'
+  ].join('');
+  document.head.appendChild(s);
+})();
 
 function pdfPrevPage() {
   if (_pdfCurrentPage <= 1) return;
@@ -2327,24 +2351,52 @@ function updatePdfPageInfo() {
 function renderPdfPage(pageNum) {
   if (!_pdfDoc) return;
   _pdfDoc.getPage(pageNum).then(function(page) {
-    var container = document.getElementById('pdfCanvasContainer');
-    var existingCanvas = document.getElementById('pdfMainCanvas');
-    if (existingCanvas) existingCanvas.remove();
-    var canvas = document.createElement('canvas');
-    canvas.id = 'pdfMainCanvas';
-    canvas.style.maxWidth = '100%';
-    canvas.style.borderRadius = '4px';
-    canvas.style.boxShadow = '0 2px 12px rgba(0,0,0,.4)';
-    container.appendChild(canvas);
+    var canvas = document.getElementById('pdfMainCanvas');
+    var textLayer = document.getElementById('pdfTextLayer');
+    var wrap = document.getElementById('pdfPageWrap');
+    if (!canvas || !textLayer || !wrap) return;
+
+    // clear old text spans
+    textLayer.innerHTML = '';
+
+    var viewerDiv = document.getElementById('workerPdfViewer');
+    var containerWidth = (viewerDiv ? viewerDiv.offsetWidth : 320) - 24;
+    var viewport1 = page.getViewport({scale: 1});
+    var scale = Math.min(containerWidth / viewport1.width, 2.5);
+    _pdfScale = scale;
+    var viewport = page.getViewport({scale: scale});
+
+    // Size the canvas
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width  = Math.floor(viewport.width  * dpr);
+    canvas.height = Math.floor(viewport.height * dpr);
+    canvas.style.width  = Math.floor(viewport.width)  + 'px';
+    canvas.style.height = Math.floor(viewport.height) + 'px';
+
+    // Size the wrap so text layer aligns perfectly
+    wrap.style.width  = Math.floor(viewport.width)  + 'px';
+    wrap.style.height = Math.floor(viewport.height) + 'px';
+    textLayer.style.width  = Math.floor(viewport.width)  + 'px';
+    textLayer.style.height = Math.floor(viewport.height) + 'px';
+
     var ctx = canvas.getContext('2d');
-    // Scale to fit mobile width
-    var containerWidth = container.offsetWidth || 320;
-    var viewport = page.getViewport({scale: 1});
-    var scale = Math.min((containerWidth - 20) / viewport.width, 2);
-    var scaledViewport = page.getViewport({scale: scale});
-    canvas.width = scaledViewport.width;
-    canvas.height = scaledViewport.height;
-    page.render({canvasContext: ctx, viewport: scaledViewport});
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Render canvas
+    page.render({canvasContext: ctx, viewport: viewport}).promise.then(function() {
+      // Render text layer
+      page.getTextContent().then(function(textContent) {
+        if (typeof pdfjsLib.renderTextLayer === 'function') {
+          pdfjsLib.renderTextLayer({
+            textContentSource: textContent,
+            container: textLayer,
+            viewport: viewport,
+            textDivs: []
+          });
+        }
+      });
+    });
+
     updatePdfPageInfo();
   });
 }
@@ -2357,11 +2409,9 @@ function renderPdfFromDataUrl(dataUrl) {
   viewer.style.display = 'none';
   if (loadingEl) loadingEl.style.display = 'flex';
 
-  // Set the "open in tab" link
   var openTab = document.getElementById('pdfOpenTab');
   if (openTab) openTab.href = dataUrl;
 
-  // Load PDF.js if not loaded yet
   function doRender() {
     var pdfData = atob(dataUrl.split(',')[1]);
     var arr = new Uint8Array(pdfData.length);
@@ -2597,14 +2647,17 @@ if ('serviceWorker' in navigator) {
     <!-- תוכן -->
     <div style="flex:1;overflow:auto;position:relative;min-height:420px">
 
-      <!-- PDF.js canvas viewer — עובד בנייד! -->
-      <div id="workerPdfViewer" style="display:none;width:100%;overflow-y:auto;background:#525659;padding:10px;box-sizing:border-box">
-        <div id="pdfCanvasContainer" style="display:flex;flex-direction:column;align-items:center;gap:10px"></div>
-        <div style="text-align:center;margin-top:10px;padding-bottom:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-          <button onclick="pdfPrevPage()" id="pdfPrevBtn" style="padding:7px 16px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;font-family:Heebo,Arial;font-size:.85rem;cursor:pointer">◀ הקודם</button>
-          <span id="pdfPageInfo" style="color:#fff;font-size:.85rem;font-family:Heebo,Arial;align-self:center;padding:0 6px"></span>
-          <button onclick="pdfNextPage()" id="pdfNextBtn" style="padding:7px 16px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;font-family:Heebo,Arial;font-size:.85rem;cursor:pointer">הבא ▶</button>
-          <a id="pdfOpenTab" href="#" target="_blank" style="padding:7px 16px;background:rgba(79,142,247,.8);color:#fff;border:none;border-radius:8px;font-family:Heebo,Arial;font-size:.85rem;cursor:pointer;text-decoration:none">🔗 פתח בטאב</a>
+      <!-- PDF viewer: canvas + text layer -->
+      <div id="workerPdfViewer" style="display:none;width:100%;overflow-y:auto;background:#525659;padding:10px 6px;box-sizing:border-box;min-height:420px">
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <button onclick="pdfPrevPage()" id="pdfPrevBtn" style="padding:6px 14px;background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:8px;font-family:Heebo,Arial;font-size:.82rem;cursor:pointer">&#9664; הקודם</button>
+          <span id="pdfPageInfo" style="color:#eee;font-size:.82rem;font-family:Heebo,Arial;min-width:80px;text-align:center"></span>
+          <button onclick="pdfNextPage()" id="pdfNextBtn" style="padding:6px 14px;background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:8px;font-family:Heebo,Arial;font-size:.82rem;cursor:pointer">הבא &#9654;</button>
+          <a id="pdfOpenTab" href="#" target="_blank" style="padding:6px 13px;background:rgba(79,142,247,.75);color:#fff;border-radius:8px;font-family:Heebo,Arial;font-size:.82rem;text-decoration:none">&#128279; פתח בטאב</a>
+        </div>
+        <div id="pdfPageWrap" style="position:relative;margin:0 auto;display:inline-block;line-height:0">
+          <canvas id="pdfMainCanvas" style="display:block;max-width:100%;border-radius:3px"></canvas>
+          <div id="pdfTextLayer" style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;line-height:1;pointer-events:auto;"></div>
         </div>
       </div>
 
