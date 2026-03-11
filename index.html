@@ -2179,9 +2179,11 @@ function openWorkerPdf(workerName) {
 
   // אם יש בזיכרון — הצג מיד
   if (_workerPdfs[workerName] && _workerPdfs[workerName] !== '__pending__') {
-    viewer.src = _workerPdfs[workerName] + '#navpanes=0&toolbar=1';
-    viewer.style.display = 'block';
-    placeholder.style.display = 'none';
+    var dataUrl0 = _workerPdfs[workerName];
+    var bc0 = atob(dataUrl0.split(',')[1]);
+    var ba0 = new Uint8Array(bc0.length);
+    for(var _i0=0;_i0<bc0.length;_i0++) ba0[_i0]=bc0.charCodeAt(_i0);
+    _showPdfBlob(new Blob([ba0],{type:'application/pdf'}), workerName);
     if(loadingEl) loadingEl.style.display = 'none';
     document.getElementById('workerPdfModal').style.display = 'flex';
     return;
@@ -2201,7 +2203,18 @@ function openWorkerPdf(workerName) {
       if(res.email) _workerEmails[workerName] = res.email;
       if(res.phone) _workerPhones[workerName] = res.phone;
       if(res.email || res.phone) _refreshPdfEmailField(workerName);
-      renderPdfFromDataUrl(dataUrl);
+      try {
+        var byteChars = atob(res.base64);
+        var byteArr = new Uint8Array(byteChars.length);
+        for(var _b=0;_b<byteChars.length;_b++) byteArr[_b]=byteChars.charCodeAt(_b);
+        var blob = new Blob([byteArr], {type: res.mimeType||'application/pdf'});
+        _showPdfBlob(blob, workerName);
+      } catch(e) {
+        var byteChars2 = atob(dataUrl.split(',')[1]);
+        var byteArr2 = new Uint8Array(byteChars2.length);
+        for(var _b2=0;_b2<byteChars2.length;_b2++) byteArr2[_b2]=byteChars2.charCodeAt(_b2);
+        _showPdfBlob(new Blob([byteArr2],{type:'application/pdf'}), workerName);
+      }
       renderRates();
     } else {
       placeholder.style.display = 'flex';
@@ -2300,148 +2313,39 @@ function closeWorkerPdf() {
   document.getElementById('workerPdfModal').style.display = 'none';
 }
 
-// ===== PDF.js viewer globals =====
-var _pdfDoc = null;
-var _pdfCurrentPage = 1;
-var _pdfTotalPages = 0;
-var _pdfScale = 1;
-
-// inject text-layer CSS once
-(function(){
-  var s = document.createElement('style');
-  s.textContent = [
-    '#pdfTextLayer {',
-    '  position:absolute;top:0;left:0;right:0;bottom:0;',
-    '  overflow:hidden;opacity:0.25;line-height:1;',
-    '  -webkit-text-size-adjust:none;',
-    '}',
-    '#pdfTextLayer span {',
-    '  color:transparent;',
-    '  position:absolute;',
-    '  white-space:pre;',
-    '  cursor:text;',
-    '  transform-origin:0% 0%;',
-    '  -webkit-user-select:text;user-select:text;',
-    '}',
-    '#pdfTextLayer ::selection { background:rgba(0,100,255,0.3); }',
-    '#pdfPageWrap { display:block; margin:0 auto; line-height:0; }'
-  ].join('');
-  document.head.appendChild(s);
-})();
-
-function pdfPrevPage() {
-  if (_pdfCurrentPage <= 1) return;
-  _pdfCurrentPage--;
-  renderPdfPage(_pdfCurrentPage);
-}
-function pdfNextPage() {
-  if (_pdfCurrentPage >= _pdfTotalPages) return;
-  _pdfCurrentPage++;
-  renderPdfPage(_pdfCurrentPage);
-}
-function updatePdfPageInfo() {
-  var el = document.getElementById('pdfPageInfo');
-  var prev = document.getElementById('pdfPrevBtn');
-  var next = document.getElementById('pdfNextBtn');
-  if (el) el.textContent = 'עמוד ' + _pdfCurrentPage + ' מתוך ' + _pdfTotalPages;
-  if (prev) prev.disabled = _pdfCurrentPage <= 1;
-  if (next) next.disabled = _pdfCurrentPage >= _pdfTotalPages;
-}
-
-function renderPdfPage(pageNum) {
-  if (!_pdfDoc) return;
-  _pdfDoc.getPage(pageNum).then(function(page) {
-    var canvas = document.getElementById('pdfMainCanvas');
-    var textLayer = document.getElementById('pdfTextLayer');
-    var wrap = document.getElementById('pdfPageWrap');
-    if (!canvas || !textLayer || !wrap) return;
-
-    // clear old text spans
-    textLayer.innerHTML = '';
-
-    var viewerDiv = document.getElementById('workerPdfViewer');
-    var containerWidth = (viewerDiv ? viewerDiv.offsetWidth : 320) - 24;
-    var viewport1 = page.getViewport({scale: 1});
-    var scale = Math.min(containerWidth / viewport1.width, 2.5);
-    _pdfScale = scale;
-    var viewport = page.getViewport({scale: scale});
-
-    // Size the canvas
-    var dpr = window.devicePixelRatio || 1;
-    canvas.width  = Math.floor(viewport.width  * dpr);
-    canvas.height = Math.floor(viewport.height * dpr);
-    canvas.style.width  = Math.floor(viewport.width)  + 'px';
-    canvas.style.height = Math.floor(viewport.height) + 'px';
-
-    // Size the wrap so text layer aligns perfectly
-    wrap.style.width  = Math.floor(viewport.width)  + 'px';
-    wrap.style.height = Math.floor(viewport.height) + 'px';
-    textLayer.style.width  = Math.floor(viewport.width)  + 'px';
-    textLayer.style.height = Math.floor(viewport.height) + 'px';
-
-    var ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    // Render canvas
-    page.render({canvasContext: ctx, viewport: viewport}).promise.then(function() {
-      // Render text layer
-      page.getTextContent().then(function(textContent) {
-        if (typeof pdfjsLib.renderTextLayer === 'function') {
-          pdfjsLib.renderTextLayer({
-            textContentSource: textContent,
-            container: textLayer,
-            viewport: viewport,
-            textDivs: []
-          });
-        }
-      });
-    });
-
-    updatePdfPageInfo();
-  });
-}
-
-function renderPdfFromDataUrl(dataUrl) {
-  var loadingEl = document.getElementById('workerPdfLoading');
+function _showPdfBlob(blob, workerName) {
+  var blobUrl = URL.createObjectURL(blob);
   var viewer = document.getElementById('workerPdfViewer');
   var placeholder = document.getElementById('workerPdfPlaceholder');
+  var loadingEl = document.getElementById('workerPdfLoading');
+  var obj = document.getElementById('workerPdfObject');
+  var fallback = document.getElementById('workerPdfMobileFallback');
+  var openLink = document.getElementById('workerPdfOpenLink');
 
-  viewer.style.display = 'none';
-  if (loadingEl) loadingEl.style.display = 'flex';
+  if(loadingEl) loadingEl.style.display = 'none';
+  if(placeholder) placeholder.style.display = 'none';
 
-  var openTab = document.getElementById('pdfOpenTab');
-  if (openTab) openTab.href = dataUrl;
+  // Set open link always
+  if(openLink) openLink.href = blobUrl;
 
-  function doRender() {
-    var pdfData = atob(dataUrl.split(',')[1]);
-    var arr = new Uint8Array(pdfData.length);
-    for (var i = 0; i < pdfData.length; i++) arr[i] = pdfData.charCodeAt(i);
-    pdfjsLib.getDocument({data: arr}).promise.then(function(pdf) {
-      _pdfDoc = pdf;
-      _pdfTotalPages = pdf.numPages;
-      _pdfCurrentPage = 1;
-      if (loadingEl) loadingEl.style.display = 'none';
-      viewer.style.display = 'block';
-      if (placeholder) placeholder.style.display = 'none';
-      renderPdfPage(1);
-    }).catch(function(err) {
-      if (loadingEl) loadingEl.style.display = 'none';
-      showToast('שגיאה בטעינת PDF', 'var(--red)');
-      console.error(err);
-    });
-  }
-
-  if (typeof pdfjsLib !== 'undefined') {
-    doRender();
+  // Try object tag; detect mobile where it won't work
+  var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    // On mobile — show fallback with open link
+    if(obj) obj.style.display = 'none';
+    if(fallback) fallback.style.display = 'flex';
   } else {
-    var script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.onload = function() {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      doRender();
+    // Desktop — use object tag
+    obj.data = blobUrl;
+    if(obj) obj.style.display = 'block';
+    if(fallback) fallback.style.display = 'none';
+    // If object fails to load (some browsers), show fallback after 2s
+    obj.onerror = function() {
+      obj.style.display = 'none';
+      if(fallback) fallback.style.display = 'flex';
     };
-    document.head.appendChild(script);
   }
+  viewer.style.display = 'block';
 }
 
 function handleWorkerPdfUpload(input) {
@@ -2451,13 +2355,13 @@ function handleWorkerPdfUpload(input) {
     return;
   }
   var workerName = document.getElementById('workerPdfModalName').value;
+  var viewer = document.getElementById('workerPdfViewer');
   var placeholder = document.getElementById('workerPdfPlaceholder');
   var loadingEl = document.getElementById('workerPdfLoading');
-  var viewer = document.getElementById('workerPdfViewer');
 
   viewer.style.display = 'none';
-  if (placeholder) placeholder.style.display = 'none';
-  if (loadingEl) loadingEl.style.display = 'flex';
+  if(placeholder) placeholder.style.display = 'none';
+  if(loadingEl) loadingEl.style.display = 'flex';
 
   var reader = new FileReader();
   reader.onload = function(e) {
@@ -2465,7 +2369,12 @@ function handleWorkerPdfUpload(input) {
     _workerPdfs[workerName] = dataUrl;
     _workerPdfUnsaved = _workerPdfUnsaved || {};
     _workerPdfUnsaved[workerName] = true;
-    renderPdfFromDataUrl(dataUrl);
+    // Convert dataUrl to blob for mobile compatibility
+    var byteChars = atob(dataUrl.split(',')[1]);
+    var byteArr = new Uint8Array(byteChars.length);
+    for(var i=0;i<byteChars.length;i++) byteArr[i]=byteChars.charCodeAt(i);
+    var blob = new Blob([byteArr], {type:'application/pdf'});
+    _showPdfBlob(blob, workerName);
     renderRates();
     showToast('PDF נטען — לחץ שמור כדי לשמור לדרייב', 'var(--orange)');
   };
@@ -2645,26 +2554,24 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <!-- תוכן -->
-    <div style="flex:1;overflow:auto;position:relative;min-height:420px">
+    <div style="flex:1;overflow:hidden;position:relative;min-height:420px">
 
-      <!-- PDF viewer: canvas + text layer -->
-      <div id="workerPdfViewer" style="display:none;width:100%;overflow-y:auto;background:#525659;padding:10px 6px;box-sizing:border-box;min-height:420px">
-        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-          <button onclick="pdfPrevPage()" id="pdfPrevBtn" style="padding:6px 14px;background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:8px;font-family:Heebo,Arial;font-size:.82rem;cursor:pointer">&#9664; הקודם</button>
-          <span id="pdfPageInfo" style="color:#eee;font-size:.82rem;font-family:Heebo,Arial;min-width:80px;text-align:center"></span>
-          <button onclick="pdfNextPage()" id="pdfNextBtn" style="padding:6px 14px;background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:8px;font-family:Heebo,Arial;font-size:.82rem;cursor:pointer">הבא &#9654;</button>
-          <a id="pdfOpenTab" href="#" target="_blank" style="padding:6px 13px;background:rgba(79,142,247,.75);color:#fff;border-radius:8px;font-family:Heebo,Arial;font-size:.82rem;text-decoration:none">&#128279; פתח בטאב</a>
-        </div>
-        <div id="pdfPageWrap" style="position:relative;margin:0 auto;display:inline-block;line-height:0">
-          <canvas id="pdfMainCanvas" style="display:block;max-width:100%;border-radius:3px"></canvas>
-          <div id="pdfTextLayer" style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;line-height:1;pointer-events:auto;"></div>
+      <!-- PDF viewer — עובד בנייד ובדסקטופ -->
+      <div id="workerPdfViewer" style="display:none;width:100%;height:100%;min-height:500px;position:relative">
+        <object id="workerPdfObject" type="application/pdf" style="width:100%;height:100%;min-height:500px;border:none"></object>
+        <!-- fallback לנייד -->
+        <div id="workerPdfMobileFallback" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:420px;gap:16px;padding:24px;text-align:center">
+          <div style="font-size:3.5rem">📄</div>
+          <div style="font-weight:700;font-size:1rem;color:var(--text1)">PDF מוכן לצפייה</div>
+          <div style="font-size:.82rem;color:var(--text3)">לחץ לפתיחת הקובץ</div>
+          <a id="workerPdfOpenLink" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:13px 28px;background:var(--accent);color:#fff;border-radius:10px;font-size:.95rem;font-weight:700;text-decoration:none">📂 פתח PDF</a>
         </div>
       </div>
 
       <!-- loading state -->
       <div id="workerPdfLoading" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:420px;gap:16px">
         <div style="width:44px;height:44px;border:3px solid rgba(79,142,247,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></div>
-        <div style="font-size:.88rem;color:var(--text3)">טוען PDF...</div>
+        <div style="font-size:.88rem;color:var(--text3)">טוען PDF מהדרייב...</div>
       </div>
 
       <!-- placeholder לפני העלאה -->
