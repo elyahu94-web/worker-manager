@@ -1274,6 +1274,12 @@ function parseList() {
   _pendingFixes={};
   var raw=document.getElementById("rawText").value.trim();
   if(!raw){showToast("הדבק טקסט קודם","var(--orange)");return;}
+  // אם פרויקטים עדיין לא נטענו — טען קודם
+  if(!_projects.length) {
+    showToast("טוען פרויקטים...","var(--accent)");
+    loadProjectsList(function(){ parseList(); });
+    return;
+  }
   var lines=raw.split("\n");
   parsedRows=[]; var errors=[]; var projWarnings=[];
   var blocks=[],currentDate="",currentLines=[];
@@ -2195,7 +2201,17 @@ function openWorkerPdf(workerName) {
       if(res.email) _workerEmails[workerName] = res.email;
       if(res.phone) _workerPhones[workerName] = res.phone;
       if(res.email || res.phone) _refreshPdfEmailField(workerName);
-      viewer.src = dataUrl + '#navpanes=0&toolbar=1';
+      // המר ל-blob URL לתמיכה במובייל
+      try {
+        var byteChars = atob(res.base64);
+        var byteArr = new Uint8Array(byteChars.length);
+        for(var _b=0;_b<byteChars.length;_b++) byteArr[_b]=byteChars.charCodeAt(_b);
+        var blob = new Blob([byteArr], {type: res.mimeType||'application/pdf'});
+        var blobUrl = URL.createObjectURL(blob);
+        viewer.src = blobUrl + '#navpanes=0&toolbar=1';
+      } catch(e) {
+        viewer.src = dataUrl + '#navpanes=0&toolbar=1';
+      }
       viewer.style.display = 'block';
       placeholder.style.display = 'none';
       renderRates();
