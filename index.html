@@ -468,6 +468,11 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
         <input id="nwHourly" type="number" placeholder="₪/שעה" style="flex:1;min-width:80px;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;color:var(--text1);display:none">
         <button onclick="addRate()" style="padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:1.1rem">➕</button>
       </div>
+      <div style="margin-bottom:8px">
+        <button onclick="openOnboardingLink()" style="width:100%;padding:11px;background:rgba(52,211,153,.12);color:var(--green);border:1.5px solid rgba(52,211,153,.4);border-radius:9px;font-weight:700;cursor:pointer;font-family:Heebo,Arial;font-size:.9rem;display:flex;align-items:center;justify-content:center;gap:8px">
+          🔗 שליחת קישור לעובד למילוי פרטים + טופס 101
+        </button>
+      </div>
       <p class="hint" id="rateTypeHint">💡 הגדר תעריף לעובד — יומלא אוטומטית בייבוא רשימה</p><br>
       <div style="margin-bottom:10px;position:relative">
         <input id="workerSearch" type="text" placeholder="🔍 חפש עובד..." oninput="renderRates()" style="width:100%;padding:9px 14px;background:var(--bg3);border:1.5px solid var(--border);border-radius:9px;font-family:'Heebo',Arial;direction:rtl;color:var(--text1);font-size:.92rem;box-sizing:border-box">
@@ -673,6 +678,10 @@ function apiCall(action, payload, onSuccess, onError) {
 }
 
 // ===== TABS =====
+
+function openOnboardingLink() {
+  window.open('https://elyahu94-web.github.io/employee-onboarding/admin.html', '_blank');
+}
 function showTab(n) {
   if (n === 1) {
     var el = document.getElementById('ratesList');
