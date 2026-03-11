@@ -674,7 +674,11 @@ function apiCall(action, payload, onSuccess, onError) {
 
 // ===== TABS =====
 function showTab(n) {
-  if (n === 1) loadRates();
+  if (n === 1) {
+    var el = document.getElementById('ratesList');
+    if (el) el.innerHTML = "<div class='loading' style='text-align:center;padding:40px;font-size:1rem;color:var(--text3)'>⏳ טוען עובדים...</div>";
+    loadRates();
+  }
   if (n === 2) loadReportData();
   if (n === 3) loadSalaryData();
   if (n === 4) loadMifraotTab();
