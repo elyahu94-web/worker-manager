@@ -411,7 +411,7 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
         <input type="date" id="manualDate" class="inp">
       </div>
 
-      <div id="manualHourlyFields">
+      <div id="manualHourlyFields" style="display:none">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
           <div>
             <label class="lbl">שעת כניסה</label>
@@ -850,6 +850,8 @@ function loadRates() {
   });
 }
 loadRates();
+// סנכרן ממשק הוספה ידנית עם ברירת המחדל
+setManualEntryType('יומי', true);
 // טען סטטוס PDFs מ-Drive
 apiCall('getWorkersPdfStatus', null, function(res) {
   if (res && res.names) {
@@ -1037,6 +1039,7 @@ function loadManualSelects() {
       nameSel.innerHTML += "<option value='"+r.name+"'>"+r.name+"</option>";
     }
   });
+  if (nameSel.value) manualFillRate();
 }
 
 function getWorkerRecord(name, proj) {
