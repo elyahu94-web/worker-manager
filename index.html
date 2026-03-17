@@ -849,7 +849,6 @@ function loadRates() {
     renderRates();
   });
 }
-// הצג טוען מיד בפתיחת הדף
 document.getElementById("manualName").innerHTML = "<option value=''>⏳ טוען...</option>";
 document.getElementById("manualName").disabled = true;
 loadRates();
@@ -1085,10 +1084,18 @@ function onManualNameChange() {
 function manualFillRate() {
   var name = document.getElementById("manualName").value;
   var proj = document.getElementById("manualProject").value.trim();
-  if (!name || !proj) return;
-  var rec = getWorkerRecord(name, proj);
+  if (!name) return;
+
+  // חפש לפי שם+פרויקט, אם לא נמצא — חפש לפי שם בלבד
+  var rec = proj ? getWorkerRecord(name, proj) : null;
+  if (!rec) {
+    for (var i = 0; i < rates.length; i++) {
+      if (rates[i].name === name.trim()) { rec = rates[i]; break; }
+    }
+  }
   if (!rec) return;
 
+  // עבור אוטומטית למצב הנכון
   var recType = rec.rateType === "שעתי" ? "שעתי" : "יומי";
   if (_manualEntryType !== recType) setManualEntryType(recType, true);
 
@@ -1140,12 +1147,9 @@ function manualCalc() {
 function applyHalfDay() {
   var name = document.getElementById("manualName").value;
   var proj = document.getElementById("manualProject").value;
-  if (!name || !proj) { showToast("בחר עובד ופרויקט קודם","var(--orange)"); return; }
+  if (!name) { showToast("בחר עובד קודם","var(--orange)"); return; }
   if (_manualEntryType === "יומי") {
-    var rec = getWorkerRecord(name, proj);
-    var base = rec ? (rec.amount || 0) : 0;
-    var cur = parseFloat(document.getElementById("manualDailyAmount").value);
-    if (cur > 0) base = cur;
+    var base = parseFloat(document.getElementById("manualDailyAmount").value) || 0;
     if (!base) { showToast("הזן סכום יומי קודם","var(--orange)"); return; }
     var half = Math.round(base / 2);
     document.getElementById("manualDailyAmount").value = half;
