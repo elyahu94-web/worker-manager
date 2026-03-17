@@ -1092,13 +1092,16 @@ function onManualNameChange() {
 
     // שלוף סכום קבוע ישירות — תמיד, גם בלי פרויקט
     var isH = rec.rateType === "שעתי";
-    setManualEntryType(isH ? "שעתי" : "יומי", true);
     if (isH) {
+      // הכנס ערך לפני setManualEntryType כדי שהחישוב יעבוד
       document.getElementById("manualHourlyRate").value = rec.hourlyRate || "";
+      setManualEntryType("שעתי", true);
       manualCalc();
     } else {
+      // הכנס ערך לפני setManualEntryType
       document.getElementById("manualDailyAmount").value = rec.amount || "";
       document.getElementById("manualDailyHint").textContent = rec.amount ? "✅ סכום קבוע מהמערכת: ₪" + rec.amount : "";
+      setManualEntryType("יומי", true);
       manualDailyCalc();
     }
   }
