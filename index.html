@@ -403,6 +403,7 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
             </div>
           </div>
           <input type="hidden" id="manualProject" oninput="manualFillRate()" onchange="manualFillRate()">
+          <datalist id="manualProjectsList"></datalist>
         </div>
       </div>
 
@@ -1058,7 +1059,7 @@ function onManualNameChange() {
   var inp = document.getElementById("manualProject");
   var dl = document.getElementById("manualProjectsList");
   inp.value = "";
-  dl.innerHTML = "";
+  if (dl) dl.innerHTML = "";
   document.getElementById("manualHourlyRate").value = "";
   document.getElementById("manualDailyAmount").value = "";
   document.getElementById("manualDailyHint").textContent = "";
@@ -1068,12 +1069,12 @@ function onManualNameChange() {
   if (!name) {
     var allProjs = {};
     rates.forEach(function(r){ if(r.project) allProjs[r.project]=1; });
-    Object.keys(allProjs).sort().forEach(function(p){ dl.innerHTML += "<option value='"+p+"'>"; });
+    if(dl) Object.keys(allProjs).sort().forEach(function(p){ dl.innerHTML += "<option value='"+p+"'>"; });
     return;
   }
   var allProjs = {};
   rates.forEach(function(r){ if(r.project) allProjs[r.project]=1; });
-  Object.keys(allProjs).sort().forEach(function(p){ dl.innerHTML += "<option value='"+p+"'>"; });
+  if(dl) Object.keys(allProjs).sort().forEach(function(p){ dl.innerHTML += "<option value='"+p+"'>"; });
   var workerRecs = rates.filter(function(r){ return r.name === name; });
   if (workerRecs.length >= 1) {
     var rec = workerRecs[0];
