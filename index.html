@@ -408,7 +408,7 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
 
       <div style="margin-bottom:10px">
         <label class="lbl">תאריך</label>
-        <input type="date" id="manualDate" class="inp">
+        <input type="text" id="manualDate" class="inp" placeholder="⏳ טוען..." disabled>
       </div>
 
       <div id="manualHourlyFields" style="display:none">
@@ -451,7 +451,7 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
       </div>
 
             <button type="button" onclick="applyHalfDay()" style="width:100%;padding:11px;background:rgba(79,142,247,.1);color:var(--accent);border:2px dashed var(--accent);border-radius:10px;font-size:.92rem;font-weight:700;cursor:pointer;font-family:'Heebo',Arial;margin-bottom:8px;margin-top:4px">🌗 חצי יום עבודה</button>
-      <button onclick="doManualEntry()" class="btn bg" style="margin-top:0">✅ שמור לשיטס</button>
+      <button id="manualSubmitBtn" onclick="doManualEntry()" class="btn bg" style="margin-top:0">✅ שמור לשיטס</button>
     </div>
   </div>
 
@@ -851,6 +851,10 @@ function loadRates() {
 }
 document.getElementById("manualName").innerHTML = "<option value=''>⏳ טוען...</option>";
 document.getElementById("manualName").disabled = true;
+var _dateEl = document.getElementById("manualDate");
+_dateEl.type = "date";
+_dateEl.disabled = false;
+_dateEl.value = new Date().toISOString().split("T")[0];
 loadRates();
 setManualEntryType('יומי', true);
 // טען סטטוס PDFs מ-Drive
@@ -1186,8 +1190,14 @@ function doManualEntry() {
     }
   }
 
+  var submitBtn = document.getElementById("manualSubmitBtn");
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px;justify-content:center"><span style="width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span> שומר...</span>';
+
   apiCall('addBulkEntries', {entries:[{name:name,amount:_manualTotal,date:date,project:project,note:note}]},
     function(){
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = "✅ שמור לשיטס";
       showToast(name+" נשמר ✅");
       document.getElementById("manualName").value="";
       document.getElementById("manualProject").value="";
@@ -1206,7 +1216,11 @@ function doManualEntry() {
       document.getElementById("manualDailyCalcBox").style.display="none";
       _manualTotal=0; _manualHours=0;
     },
-    function(e){ showToast(e.message||"שגיאה","var(--red)"); }
+    function(e){
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = "✅ שמור לשיטס";
+      showToast(e.message||"שגיאה","var(--red)");
+    }
   );
 }
 
