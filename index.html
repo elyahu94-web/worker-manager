@@ -848,6 +848,11 @@ function loadRates() {
     renderRates();
   });
 }
+// הצג טעינה מיידית בselect עובדים עוד לפני שהAPI חוזר
+(function(){
+  var sel = document.getElementById("manualName");
+  if(sel){ sel.innerHTML = "<option value=''>⏳ טוען עובדים...</option>"; sel.disabled = true; }
+})();
 loadRates();
 // טען סטטוס PDFs מ-Drive
 apiCall('getWorkersPdfStatus', null, function(res) {
@@ -960,9 +965,9 @@ function refreshProjectsList() {
 // ===== הוספה ידנית =====
 var _manualTotal = 0;
 var _manualHours = 0;
-var _manualEntryType = "יומי";
+var _manualEntryType = "שעתי";
 
-function setManualEntryType(type, skipFill) {
+function setManualEntryType(type) {
   _manualEntryType = type;
   var isH = type === "שעתי";
   document.getElementById("manualBtnHourly").className = "type-btn" + (isH ? " on" : "");
@@ -970,7 +975,7 @@ function setManualEntryType(type, skipFill) {
   document.getElementById("manualHourlyFields").style.display = isH ? "block" : "none";
   document.getElementById("manualDailyFields").style.display  = isH ? "none" : "block";
   _manualTotal = 0; _manualHours = 0;
-  if (!skipFill) manualFillRate();
+  manualFillRate();
 }
 
 function showProjSelect(){
@@ -1058,21 +1063,7 @@ function onManualNameChange() {
   rates.forEach(function(r){ if(r.project) allProjs[r.project]=1; });
   Object.keys(allProjs).sort().forEach(function(p){ dl.innerHTML += "<option value='"+p+"'>"; });
   var workerRecs = rates.filter(function(r){ return r.name === name; });
-  if (workerRecs.length === 1) {
-    inp.value = workerRecs[0].project;
-    // עדכן select הפרויקט
-    var projSel = document.getElementById("manualProjSelect");
-    if (projSel) {
-      projSel.value = workerRecs[0].project;
-      projSel.style.display = "block";
-      document.getElementById("manualProjInputWrap").style.display = "none";
-      document.getElementById("btnChooseProj").style.borderColor = "var(--accent)";
-      document.getElementById("btnChooseProj").style.color = "var(--accent)";
-      document.getElementById("btnTypeProj").style.borderColor = "var(--border)";
-      document.getElementById("btnTypeProj").style.color = "var(--text1)";
-    }
-    manualFillRate();
-  }
+  if (workerRecs.length === 1) { inp.value = workerRecs[0].project; manualFillRate(); }
 }
 
 function manualFillRate() {
@@ -1082,15 +1073,15 @@ function manualFillRate() {
   var rec = getWorkerRecord(name, proj);
   if (!rec) return;
 
-  // עבור אוטומטית למצב הנכון לפי סוג העובד (skipFill=true למניעת רקורסיה)
-  var recType = rec.rateType === "שעתי" ? "שעתי" : "יומי";
-  if (_manualEntryType !== recType) setManualEntryType(recType, true);
-
-  if (recType === "שעתי") {
-    document.getElementById("manualHourlyRate").value = rec.hourlyRate || "";
+  if (_manualEntryType === "שעתי") {
+    if (rec.rateType === "שעתי" && rec.hourlyRate) {
+      document.getElementById("manualHourlyRate").value = rec.hourlyRate;
+    } else if (rec.amount) {
+      document.getElementById("manualHourlyRate").value = Math.round(parseFloat(rec.amount) / 8);
+    }
     manualCalc();
   } else {
-    var dailyAmt = rec.amount || 0;
+    var dailyAmt = rec.rateType === "שעתי" ? Math.round((rec.hourlyRate||0)*8) : (rec.amount||0);
     document.getElementById("manualDailyAmount").value = dailyAmt || "";
     document.getElementById("manualDailyHint").textContent = dailyAmt ? "✅ סכום קבוע מהמערכת: ₪"+dailyAmt : "";
     manualDailyCalc();
