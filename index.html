@@ -856,7 +856,6 @@ _dateEl.type = "date";
 _dateEl.disabled = false;
 _dateEl.value = new Date().toISOString().split("T")[0];
 loadRates();
-setManualEntryType('יומי', true);
 // טען סטטוס PDFs מ-Drive
 apiCall('getWorkersPdfStatus', null, function(res) {
   if (res && res.names) {
@@ -1043,6 +1042,8 @@ function loadManualSelects() {
       nameSel.innerHTML += "<option value='"+r.name+"'>"+r.name+"</option>";
     }
   });
+  // סנכרן מצב כפתורים אחרי טעינה
+  setManualEntryType(_manualEntryType, true);
 }
 
 function getWorkerRecord(name, proj) {
