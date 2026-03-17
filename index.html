@@ -1090,7 +1090,7 @@ function onManualNameChange() {
       }
     }
 
-    // שלוף סכום קבוע ישירות — תמיד, גם בלי פרויקט
+    // הצג סכום מיד — ישירות בלי תלות בפרויקט
     var isH = rec.rateType === "שעתי";
     _manualEntryType = isH ? "שעתי" : "יומי";
     document.getElementById("manualBtnHourly").className = "type-btn" + (isH ? " on" : "");
@@ -1101,11 +1101,11 @@ function onManualNameChange() {
       document.getElementById("manualHourlyRate").value = rec.hourlyRate || "";
       manualCalc();
     } else {
-      var amt = rec.amount || 0;
-      document.getElementById("manualDailyAmount").value = amt;
+      var amt = parseFloat(rec.amount) || 0;
+      document.getElementById("manualDailyAmount").value = amt || "";
       document.getElementById("manualDailyHint").textContent = amt ? "✅ סכום קבוע מהמערכת: ₪" + amt : "";
       _manualTotal = amt;
-      document.getElementById("manualDailyTotal").textContent = amt ? "₪" + parseFloat(amt).toLocaleString() : "";
+      document.getElementById("manualDailyTotal").textContent = amt ? "₪" + amt.toLocaleString() : "";
       document.getElementById("manualDailyCalcBox").style.display = amt ? "block" : "none";
     }
   }
