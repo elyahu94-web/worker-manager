@@ -848,11 +848,6 @@ function loadRates() {
     renderRates();
   });
 }
-// הצג טעינה מיידית בselect עובדים עוד לפני שהAPI חוזר
-(function(){
-  var sel = document.getElementById("manualName");
-  if(sel){ sel.innerHTML = "<option value=''>⏳ טוען עובדים...</option>"; sel.disabled = true; }
-})();
 loadRates();
 // טען סטטוס PDFs מ-Drive
 apiCall('getWorkersPdfStatus', null, function(res) {
@@ -1025,15 +1020,21 @@ function addProjFromManual(){
 }
 function loadManualSelects() {
   document.getElementById("manualDate").value = new Date().toISOString().split("T")[0];
-  var sel = document.getElementById("manualProjSelect");
-  if (sel) {
-    sel.innerHTML = "<option value=''>בחר פרויקט...</option>";
-    _projects.forEach(function(p){ if(p) sel.innerHTML+="<option value='"+p+"'>"+p+"</option>"; });
+  var projSel = document.getElementById("manualProjSelect");
+  if (projSel) {
+    projSel.innerHTML = "<option value=''>בחר פרויקט...</option>";
+    _projects.forEach(function(p){ if(p) projSel.innerHTML+="<option value='"+p+"'>"+p+"</option>"; });
   }
-  apiCall('getWorkersList', null, function(workers){
-    var sel = document.getElementById("manualName");
-    sel.innerHTML = "<option value=''>בחר עובד...</option>";
-    workers.forEach(function(w){ sel.innerHTML += "<option value='"+w+"'>"+w+"</option>"; });
+  // קח ישירות מ-rates — מהיר, ללא API נוסף
+  var nameSel = document.getElementById("manualName");
+  nameSel.disabled = false;
+  var seen = {};
+  nameSel.innerHTML = "<option value=''>בחר עובד...</option>";
+  rates.forEach(function(r){
+    if (r.name && !seen[r.name]) {
+      seen[r.name] = 1;
+      nameSel.innerHTML += "<option value='"+r.name+"'>"+r.name+"</option>";
+    }
   });
 }
 
