@@ -1076,6 +1076,7 @@ function onManualNameChange() {
   var workerRecs = rates.filter(function(r){ return r.name === name; });
   if (workerRecs.length >= 1) {
     var rec = workerRecs[0];
+    // עדכן פרויקט
     inp.value = rec.project;
     var projSel = document.getElementById("manualProjSelect");
     if (projSel) {
@@ -1085,16 +1086,16 @@ function onManualNameChange() {
       document.getElementById("btnChooseProj").style.borderColor = "var(--accent)";
       document.getElementById("btnChooseProj").style.color = "var(--accent)";
     }
-    // מלא ישירות מהרשומה — לא צריך לחכות לDOM
-    var recType = rec.rateType === "שעתי" ? "שעתי" : "יומי";
-    if (_manualEntryType !== recType) setManualEntryType(recType, true);
-    if (recType === "שעתי") {
+    // שלוף סכום קבוע ישירות
+    var isH = rec.rateType === "שעתי";
+    if (isH) {
+      setManualEntryType("שעתי", true);
       document.getElementById("manualHourlyRate").value = rec.hourlyRate || "";
       manualCalc();
     } else {
-      var dailyAmt = rec.amount || 0;
-      document.getElementById("manualDailyAmount").value = dailyAmt || "";
-      document.getElementById("manualDailyHint").textContent = dailyAmt ? "✅ סכום קבוע מהמערכת: ₪"+dailyAmt : "";
+      setManualEntryType("יומי", true);
+      document.getElementById("manualDailyAmount").value = rec.amount || "";
+      document.getElementById("manualDailyHint").textContent = rec.amount ? "✅ סכום קבוע מהמערכת: ₪"+rec.amount : "";
       manualDailyCalc();
     }
   }
