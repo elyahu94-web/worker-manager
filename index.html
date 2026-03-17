@@ -450,7 +450,8 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
         </div>
       </div>
 
-      <button onclick="doManualEntry()" class="btn bg" style="margin-top:4px">✅ שמור לשיטס</button>
+      <button type="button" onclick="applyHalfDay()" style="width:100%;padding:11px;background:rgba(79,142,247,.12);color:var(--accent);border:2px dashed var(--accent);border-radius:10px;font-size:.92rem;font-weight:700;cursor:pointer;font-family:Heebo,Arial;margin-bottom:8px;margin-top:4px">🌗 חצי יום עבודה</button>
+      <button onclick="doManualEntry()" class="btn bg" style="margin-top:0">✅ שמור לשיטס</button>
     </div>
   </div>
 
@@ -1115,6 +1116,41 @@ function manualCalc() {
   document.getElementById("manualCalcDetail").innerHTML = html;
   document.getElementById("manualCalcTotal").textContent = fS(total);
   box.style.display = "block";
+}
+
+function applyHalfDay() {
+  var name = document.getElementById("manualName").value;
+  var proj = document.getElementById("manualProject").value;
+  if (!name || !proj) { showToast("בחר עובד ופרויקט קודם","var(--orange)"); return; }
+
+  if (_manualEntryType === "יומי") {
+    // עובד יומי — חצי מהסכום היומי
+    var rec = getWorkerRecord(name, proj);
+    var dailyAmt = 0;
+    if (rec) {
+      dailyAmt = rec.rateType === "שעתי" ? Math.round((rec.hourlyRate||0)*8) : (rec.amount||0);
+    }
+    var currentAmt = parseFloat(document.getElementById("manualDailyAmount").value);
+    var base = currentAmt || dailyAmt;
+    if (!base) { showToast("הזן סכום יומי קודם","var(--orange)"); return; }
+    var half = Math.round(base / 2);
+    document.getElementById("manualDailyAmount").value = half;
+    manualDailyCalc();
+    // עדכן את תיבת החישוב עם הסבר
+    var box = document.getElementById("manualDailyCalcBox");
+    document.getElementById("manualDailyTotal").textContent = "₪" + half.toLocaleString();
+    box.style.display = "block";
+    showToast("חצי יום — ₪" + half + " (מתוך ₪" + base + ")");
+
+  } else {
+    // עובד שעתי — קבע 08:00–12:00 (4 שעות)
+    var rate = parseFloat(document.getElementById("manualHourlyRate").value);
+    if (!rate) { showToast("מלא תעריף לשעה קודם","var(--orange)"); return; }
+    document.getElementById("manualStart").value = "08:00";
+    document.getElementById("manualEnd").value   = "12:00";
+    manualCalc();
+    showToast("חצי יום — 4 שעות × ₪" + rate);
+  }
 }
 
 function doManualEntry() {
