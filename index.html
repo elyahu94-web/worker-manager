@@ -1025,18 +1025,10 @@ function loadManualSelects() {
     sel.innerHTML = "<option value=''>בחר פרויקט...</option>";
     _projects.forEach(function(p){ if(p) sel.innerHTML+="<option value='"+p+"'>"+p+"</option>"; });
   }
-  var sel1 = document.getElementById("manualName");
-  sel1.innerHTML = "<option value=''>⏳ טוען עובדים...</option>";
-  sel1.disabled = true;
   apiCall('getWorkersList', null, function(workers){
     var sel = document.getElementById("manualName");
-    sel.disabled = false;
     sel.innerHTML = "<option value=''>בחר עובד...</option>";
     workers.forEach(function(w){ sel.innerHTML += "<option value='"+w+"'>"+w+"</option>"; });
-  }, function(){
-    var sel = document.getElementById("manualName");
-    sel.disabled = false;
-    sel.innerHTML = "<option value=''>שגיאה בטעינה</option>";
   });
 }
 
@@ -1066,7 +1058,24 @@ function onManualNameChange() {
   rates.forEach(function(r){ if(r.project) allProjs[r.project]=1; });
   Object.keys(allProjs).sort().forEach(function(p){ dl.innerHTML += "<option value='"+p+"'>"; });
   var workerRecs = rates.filter(function(r){ return r.name === name; });
-  if (workerRecs.length === 1) { inp.value = workerRecs[0].project; manualFillRate(); }
+  if (workerRecs.length === 1) {
+    inp.value = workerRecs[0].project;
+    // עבור אוטומטית למצב הנכון לפי סוג העובד
+    var recType = workerRecs[0].rateType === "שעתי" ? "שעתי" : "יומי";
+    if (_manualEntryType !== recType) setManualEntryType(recType);
+    // עדכן גם את select הפרויקט אם קיים
+    var projSel = document.getElementById("manualProjSelect");
+    if (projSel) {
+      projSel.value = workerRecs[0].project;
+      projSel.style.display = "block";
+      document.getElementById("manualProjInputWrap").style.display = "none";
+      document.getElementById("btnChooseProj").style.borderColor = "var(--accent)";
+      document.getElementById("btnChooseProj").style.color = "var(--accent)";
+      document.getElementById("btnTypeProj").style.borderColor = "var(--border)";
+      document.getElementById("btnTypeProj").style.color = "var(--text1)";
+    }
+    manualFillRate();
+  }
 }
 
 function manualFillRate() {
@@ -1076,15 +1085,15 @@ function manualFillRate() {
   var rec = getWorkerRecord(name, proj);
   if (!rec) return;
 
-  if (_manualEntryType === "שעתי") {
-    if (rec.rateType === "שעתי" && rec.hourlyRate) {
-      document.getElementById("manualHourlyRate").value = rec.hourlyRate;
-    } else if (rec.amount) {
-      document.getElementById("manualHourlyRate").value = Math.round(parseFloat(rec.amount) / 8);
-    }
+  // עבור אוטומטית למצב הנכון לפי סוג העובד
+  var recType = rec.rateType === "שעתי" ? "שעתי" : "יומי";
+  if (_manualEntryType !== recType) setManualEntryType(recType);
+
+  if (recType === "שעתי") {
+    document.getElementById("manualHourlyRate").value = rec.hourlyRate || "";
     manualCalc();
   } else {
-    var dailyAmt = rec.rateType === "שעתי" ? Math.round((rec.hourlyRate||0)*8) : (rec.amount||0);
+    var dailyAmt = rec.amount || 0;
     document.getElementById("manualDailyAmount").value = dailyAmt || "";
     document.getElementById("manualDailyHint").textContent = dailyAmt ? "✅ סכום קבוע מהמערכת: ₪"+dailyAmt : "";
     manualDailyCalc();
