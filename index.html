@@ -849,8 +849,10 @@ function loadRates() {
     renderRates();
   });
 }
+// הצג טוען מיד בפתיחת הדף
+document.getElementById("manualName").innerHTML = "<option value=''>⏳ טוען...</option>";
+document.getElementById("manualName").disabled = true;
 loadRates();
-// סנכרן ממשק הוספה ידנית עם ברירת המחדל
 setManualEntryType('יומי', true);
 // טען סטטוס PDFs מ-Drive
 apiCall('getWorkersPdfStatus', null, function(res) {
@@ -1023,12 +1025,11 @@ function addProjFromManual(){
 }
 function loadManualSelects() {
   document.getElementById("manualDate").value = new Date().toISOString().split("T")[0];
-  var sel = document.getElementById("manualProjSelect");
-  if (sel) {
-    sel.innerHTML = "<option value=''>בחר פרויקט...</option>";
-    _projects.forEach(function(p){ if(p) sel.innerHTML+="<option value='"+p+"'>"+p+"</option>"; });
+  var projSel = document.getElementById("manualProjSelect");
+  if (projSel) {
+    projSel.innerHTML = "<option value=''>בחר פרויקט...</option>";
+    _projects.forEach(function(p){ if(p) projSel.innerHTML+="<option value='"+p+"'>"+p+"</option>"; });
   }
-  // קח ישירות מ-rates — מהיר, ללא API נוסף
   var nameSel = document.getElementById("manualName");
   nameSel.disabled = false;
   var seen = {};
@@ -1039,7 +1040,6 @@ function loadManualSelects() {
       nameSel.innerHTML += "<option value='"+r.name+"'>"+r.name+"</option>";
     }
   });
-  if (nameSel.value) manualFillRate();
 }
 
 function getWorkerRecord(name, proj) {
@@ -1077,8 +1077,6 @@ function onManualNameChange() {
       document.getElementById("manualProjInputWrap").style.display = "none";
       document.getElementById("btnChooseProj").style.borderColor = "var(--accent)";
       document.getElementById("btnChooseProj").style.color = "var(--accent)";
-      document.getElementById("btnTypeProj").style.borderColor = "var(--border)";
-      document.getElementById("btnTypeProj").style.color = "var(--text1)";
     }
     manualFillRate();
   }
@@ -1091,7 +1089,6 @@ function manualFillRate() {
   var rec = getWorkerRecord(name, proj);
   if (!rec) return;
 
-  // עבור אוטומטית למצב הנכון לפי סוג העובד
   var recType = rec.rateType === "שעתי" ? "שעתי" : "יומי";
   if (_manualEntryType !== recType) setManualEntryType(recType, true);
 
@@ -1147,8 +1144,8 @@ function applyHalfDay() {
   if (_manualEntryType === "יומי") {
     var rec = getWorkerRecord(name, proj);
     var base = rec ? (rec.amount || 0) : 0;
-    var currentAmt = parseFloat(document.getElementById("manualDailyAmount").value);
-    if (currentAmt > 0) base = currentAmt;
+    var cur = parseFloat(document.getElementById("manualDailyAmount").value);
+    if (cur > 0) base = cur;
     if (!base) { showToast("הזן סכום יומי קודם","var(--orange)"); return; }
     var half = Math.round(base / 2);
     document.getElementById("manualDailyAmount").value = half;
@@ -1160,7 +1157,7 @@ function applyHalfDay() {
     var rate = parseFloat(document.getElementById("manualHourlyRate").value);
     if (!rate) { showToast("מלא תעריף לשעה קודם","var(--orange)"); return; }
     document.getElementById("manualStart").value = "08:00";
-    document.getElementById("manualEnd").value   = "12:00";
+    document.getElementById("manualEnd").value = "12:00";
     manualCalc();
     showToast("חצי יום — 4 שעות × ₪" + rate);
   }
