@@ -450,7 +450,8 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
         </div>
       </div>
 
-      <button onclick="doManualEntry()" class="btn bg" style="margin-top:4px">✅ שמור לשיטס</button>
+      <button type="button" onclick="applyHalfDay()" style="width:100%;padding:11px;background:rgba(79,142,247,.1);color:var(--accent);border:2px dashed var(--accent);border-radius:10px;font-size:.92rem;font-weight:700;cursor:pointer;font-family:'Heebo',Arial;margin-bottom:8px;margin-top:4px">🌗 חצי יום עבודה</button>
+      <button onclick="doManualEntry()" class="btn bg" style="margin-top:0">✅ שמור לשיטס</button>
     </div>
   </div>
 
@@ -1025,10 +1026,18 @@ function loadManualSelects() {
     sel.innerHTML = "<option value=''>בחר פרויקט...</option>";
     _projects.forEach(function(p){ if(p) sel.innerHTML+="<option value='"+p+"'>"+p+"</option>"; });
   }
+  var selLoading = document.getElementById("manualName");
+  selLoading.innerHTML = "<option value=''>⏳ טוען עובדים...</option>";
+  selLoading.disabled = true;
   apiCall('getWorkersList', null, function(workers){
     var sel = document.getElementById("manualName");
+    sel.disabled = false;
     sel.innerHTML = "<option value=''>בחר עובד...</option>";
     workers.forEach(function(w){ sel.innerHTML += "<option value='"+w+"'>"+w+"</option>"; });
+  }, function(){
+    var sel = document.getElementById("manualName");
+    sel.disabled = false;
+    sel.innerHTML = "<option value=''>שגיאה בטעינה</option>";
   });
 }
 
@@ -1061,9 +1070,9 @@ function onManualNameChange() {
   if (workerRecs.length === 1) {
     inp.value = workerRecs[0].project;
     // עבור אוטומטית למצב הנכון לפי סוג העובד
-    var recType = workerRecs[0].rateType === "שעתי" ? "שעתי" : "יומי";
-    if (_manualEntryType !== recType) setManualEntryType(recType);
-    // עדכן גם את select הפרויקט אם קיים
+    var autoType = workerRecs[0].rateType === "שעתי" ? "שעתי" : "יומי";
+    if (_manualEntryType !== autoType) setManualEntryType(autoType);
+    // הצג את select הפרויקט עם הפרויקט הנבחר
     var projSel = document.getElementById("manualProjSelect");
     if (projSel) {
       projSel.value = workerRecs[0].project;
@@ -1132,6 +1141,34 @@ function manualCalc() {
   document.getElementById("manualCalcDetail").innerHTML = html;
   document.getElementById("manualCalcTotal").textContent = fS(total);
   box.style.display = "block";
+}
+
+function applyHalfDay() {
+  var name = document.getElementById("manualName").value;
+  var proj = document.getElementById("manualProject").value;
+  if (!name || !proj) { showToast("בחר עובד ופרויקט קודם","var(--orange)"); return; }
+
+  if (_manualEntryType === "יומי") {
+    var rec = getWorkerRecord(name, proj);
+    var base = 0;
+    if (rec) base = rec.amount || 0;
+    var currentAmt = parseFloat(document.getElementById("manualDailyAmount").value);
+    if (currentAmt > 0) base = currentAmt;
+    if (!base) { showToast("הזן סכום יומי קודם","var(--orange)"); return; }
+    var half = Math.round(base / 2);
+    document.getElementById("manualDailyAmount").value = half;
+    _manualTotal = half;
+    document.getElementById("manualDailyTotal").textContent = "₪" + half.toLocaleString();
+    document.getElementById("manualDailyCalcBox").style.display = "block";
+    showToast("חצי יום — ₪" + half + " (מתוך ₪" + base + ")");
+  } else {
+    var rate = parseFloat(document.getElementById("manualHourlyRate").value);
+    if (!rate) { showToast("מלא תעריף לשעה קודם","var(--orange)"); return; }
+    document.getElementById("manualStart").value = "08:00";
+    document.getElementById("manualEnd").value   = "12:00";
+    manualCalc();
+    showToast("חצי יום — 4 שעות × ₪" + rate);
+  }
 }
 
 function doManualEntry() {
